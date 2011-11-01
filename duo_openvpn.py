@@ -7,10 +7,6 @@
 
 import os, sys, urllib, hashlib, httplib, hmac, base64, json, syslog
 
-IKEY = ''
-SKEY = ''
-HOST = ''
-
 API_RESULT_AUTH   = 'auth'
 API_RESULT_ALLOW  = 'allow'
 API_RESULT_DENY   = 'deny'
@@ -69,20 +65,38 @@ def log(msg):
     msg = 'Duo OpenVPN: %s' % msg
     syslog.syslog(msg)
 
-def preauth(username):
+def success(control):
+    log('writing success code to %s' % control)
+
+    f = open(control, 'w')
+    f.write('1')
+    f.close()
+
+    sys.exit(0)
+
+def failure(control):
+    log('writing failure code to %s' % control)
+
+    f = open(control, 'w')
+    f.write('0')
+    f.close()
+
+    sys.exit(1)
+
+def preauth(ikey, skey, host, control, username):
     log('pre-authentication for %s' % username)
 
     args = {
         'user': username,
     }
 
-    response = api(IKEY, SKEY, HOST, 'POST', '/rest/v1/preauth', **args)
+    response = api(ikey, skey, host, 'POST', '/rest/v1/preauth', **args)
 
     result = response.get('result')
 
     if not result:
         log('invalid API response: %s' % response)
-        sys.exit(1)
+        failure(control)
 
     if result == API_RESULT_AUTH:
         return
@@ -91,22 +105,22 @@ def preauth(username):
 
     if not status:
         log('invalid API response: %s' % response)
-        sys.exit(1)
+	failure(control)
 
     if result == API_RESULT_ENROLL:
         log('user %s is not enrolled: %s' % (username, status))
-        sys.exit(1)
+	failure(control)
     elif result == API_RESULT_DENY:
         log('preauth failure for %s: %s' % (username, status))
-        sys.exit(1)
+	failure(control)
     elif result == API_RESULT_ALLOW:
         log('preauth success for %s: %s' % (username, status))
-        sys.exit(0)
+	success(control)
     else:
         log('unknown preauth result: %s' % result)
-        sys.exit(1)
+	failure(control)
 
-def auth(username, password, ipaddr):
+def auth(ikey, skey, host, control, username, password, ipaddr):
     log('authentication for %s' % username)
 
     args = {
@@ -116,47 +130,56 @@ def auth(username, password, ipaddr):
         'ipaddr': ipaddr
     }
 
-    response = api(IKEY, SKEY, HOST, 'POST', '/rest/v1/auth', **args)
+    response = api(ikey, skey, host, 'POST', '/rest/v1/auth', **args)
 
     result = response.get('result')
     status = response.get('status')
 
     if not result or not status:
         log('invalid API response: %s' % response)
-        sys.exit(1)
+	failure(control)
 
     if result == API_RESULT_ALLOW:
         log('auth success for %s: %s' % (username, status))
-        sys.exit(0)
+	success(control)
     elif result == API_RESULT_DENY:
         log('auth failure for %s: %s' % (username, status))
-        sys.exit(1)
+	failure(control)
     else:
         log('unknown auth result: %s' % result)
-        sys.exit(1)
+	failure(control)
 
 def main():
-    username = os.environ.get('common_name')
+    ikey = os.environ.get('ikey')
+    skey = os.environ.get('skey')
+    host = os.environ.get('host')
+
+    if not ikey or not skey or not host:
+        log('required ikey/skey/host configuration parameters not found')
+	failure(control)
+
+    control = os.environ.get('control')
+    username = os.environ.get('username')
     password = os.environ.get('password')
-    ipaddr = os.environ.get('untrusted_ip', '0.0.0.0')
+    ipaddr = os.environ.get('ipaddr', '0.0.0.0')
 
-    if not username or not password:
-        log('environment variables not found')
-        sys.exit(1)
-
-    try:
-        preauth(username)
-    except Exception, e:
-        log(str(e))
-        sys.exit(1)
+    if not control or not username or not password:
+        log('required environment variables not found')
+	failure(control)
 
     try:
-        auth(username, password, ipaddr)
+        preauth(ikey, skey, host, control, username)
     except Exception, e:
         log(str(e))
-        sys.exit(1)
+        failure(control)
 
-    sys.exit(1)
+    try:
+        auth(ikey, skey, host, control, username, password, ipaddr)
+    except Exception, e:
+        log(str(e))
+        failure(control)
+
+    failure(control)
 
 if __name__ == '__main__':
     main()
