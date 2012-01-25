@@ -105,20 +105,20 @@ def preauth(ikey, skey, host, control, username):
 
     if not status:
         log('invalid API response: %s' % response)
-	failure(control)
+        failure(control)
 
     if result == API_RESULT_ENROLL:
         log('user %s is not enrolled: %s' % (username, status))
-	failure(control)
+        failure(control)
     elif result == API_RESULT_DENY:
         log('preauth failure for %s: %s' % (username, status))
-	failure(control)
+        failure(control)
     elif result == API_RESULT_ALLOW:
         log('preauth success for %s: %s' % (username, status))
-	success(control)
+        success(control)
     else:
         log('unknown preauth result: %s' % result)
-	failure(control)
+        failure(control)
 
 def auth(ikey, skey, host, control, username, password, ipaddr):
     log('authentication for %s' % username)
@@ -137,17 +137,17 @@ def auth(ikey, skey, host, control, username, password, ipaddr):
 
     if not result or not status:
         log('invalid API response: %s' % response)
-	failure(control)
+        failure(control)
 
     if result == API_RESULT_ALLOW:
         log('auth success for %s: %s' % (username, status))
-	success(control)
+        success(control)
     elif result == API_RESULT_DENY:
         log('auth failure for %s: %s' % (username, status))
-	failure(control)
+        failure(control)
     else:
         log('unknown auth result: %s' % result)
-	failure(control)
+        failure(control)
 
 def main():
     ikey = os.environ.get('ikey')
@@ -156,7 +156,7 @@ def main():
 
     if not ikey or not skey or not host:
         log('required ikey/skey/host configuration parameters not found')
-	failure(control)
+        sys.exit(1)
 
     control = os.environ.get('control')
     username = os.environ.get('username')
@@ -165,7 +165,7 @@ def main():
 
     if not control or not username or not password:
         log('required environment variables not found')
-	failure(control)
+        failure(control)
 
     try:
         preauth(ikey, skey, host, control, username)
