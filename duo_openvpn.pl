@@ -16,12 +16,16 @@ my $API_RESULT_AUTH   = qr/^auth$/;
 my $API_RESULT_ALLOW  = qr/^allow$/;
 my $API_RESULT_DENY   = qr/^deny$/;
 my $API_RESULT_ENROLL = qr/^enroll$/;
-my $control  = $ENV{'control'};
 
 openlog 'duo_openvpn.pl', 'pid', 'LOG_AUTH';
 
-if (not $control) {
-    logger('required control configuration');
+my $control  = $ENV{'control'};
+my $username = $ENV{'username'};
+my $password = $ENV{'password'};
+my $ipaddr   = $ENV{'ipaddr'} || '0.0.0.0';
+
+if (not $control or not $username or not $password) {
+    logger('required environmental variables not found');
     exit 1;
 }
 
@@ -31,16 +35,6 @@ my $host = $ENV{'host'};
 
 if (not $ikey or not $skey or not $host) {
     logger('required ikey/skey/host configuration');
-    failure();
-    exit 1;
-}
-
-my $username = $ENV{'username'};
-my $password = $ENV{'password'};
-my $ipaddr = $ENV{'ipaddr'} || '0.0.0.0';
-
-if (not $control or not $username or not $host) {
-    logger('required environmental variables not found');
     failure();
 }
 
