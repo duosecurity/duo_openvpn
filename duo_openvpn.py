@@ -150,6 +150,12 @@ def auth(ikey, skey, host, control, username, password, ipaddr):
         failure(control)
 
 def main():
+    control = os.environ.get('control')
+
+    if not control:
+        log('required control configuration parameter not found')
+        sys.exit(1)
+
     ikey = os.environ.get('ikey')
     skey = os.environ.get('skey')
     host = os.environ.get('host')
@@ -158,7 +164,6 @@ def main():
         log('required ikey/skey/host configuration parameters not found')
         sys.exit(1)
 
-    control = os.environ.get('control')
     username = os.environ.get('username')
     password = os.environ.get('password')
     ipaddr = os.environ.get('ipaddr', '0.0.0.0')
