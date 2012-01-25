@@ -54,14 +54,15 @@ sub canonicalize {
     my $uri    = shift;
     my $params = shift;
 
-    my @canon = ('POST', lc $host, $uri);
     my @args  = ();
 
-    foreach my $key (keys %{$params}) {
+    foreach my $key (sort (keys %{$params})) {
         push @args, (uri_escape($key) . '=' . uri_escape($params->{$key}));
     }
 
-    return join '&', @canon, @args;
+    my @canon = ('POST', lc $host, $uri, (join '&', @args));
+
+    return join "\n", @canon;
 }
 
 
@@ -70,7 +71,7 @@ sub sign {
 
     my $sig = hmac_sha1_hex(canonicalize($host, $path, $args), $skey);
     my $auth = "$ikey:$sig";
-    return 'Basic ' . encode_base64($auth);
+    return 'Basic ' . encode_base64($auth, '');
 }
 
 
@@ -111,22 +112,17 @@ sub api {
         failure();
     }
 
-    if (not defined $data->{response}) {
+    if (not defined $data->{'response'}) {
         logger("Received bad response: $json");
         failure();
     }
 
     if (not defined $data->{'response'}{'result'}) {
-        logger("invalid API response: $json");
+        logger("invalid API response: " . $data->{'response'});
         failure();
     }
 
-    if (not defined $data->{'response'}{'status'}) {
-        logger("invalid API response: $json");
-        failure();
-    }
-
-    return $data->{response};
+    return $data->{'response'};
 }
 
 
@@ -144,6 +140,11 @@ sub auth {
 
     my $result = $response->{'result'};
     my $status = $response->{'status'};
+
+    if (not defined $status) {
+        logger("invalid API response: $response");
+        failure();
+    }
 
     if ($result =~ $API_RESULT_ALLOW) {
         logger("auth success for $username: $status");
@@ -174,6 +175,11 @@ sub preauth {
 
     if ($result =~ $API_RESULT_AUTH) {
         return;
+    }
+
+    if (not defined $status) {
+        logger("invalid API response: $response");
+        failure();
     }
 
     if ($result =~ $API_RESULT_ENROLL) {

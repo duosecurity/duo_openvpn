@@ -7,8 +7,13 @@
 
 #include "openvpn-plugin.h"
 
-#define PYTHON   "python"
-#define DUO_PATH "/opt/duo/duo_openvpn.py"
+#ifndef USE_PERL
+#define INTERPRETER     "python"
+#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.py"
+#else
+#define INTERPRETER     "perl"
+#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.pl"
+#endif
 
 struct context {
 	char *ikey;
@@ -41,7 +46,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 {
 	int pid;
 	const char *control, *username, *password, *ipaddr;
-	char *argv[] = { PYTHON, DUO_PATH, NULL };
+	char *argv[] = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
 	
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
