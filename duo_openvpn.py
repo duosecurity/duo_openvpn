@@ -5,12 +5,15 @@
 # Copyright 2011 Duo Security, Inc.
 #
 
-import os, sys, urllib, hashlib, httplib, hmac, base64, json, syslog
+import os, sys, urllib, hashlib, hmac, base64, json, syslog
+from https_wrapper import CertValidatingHTTPSConnection
 
 API_RESULT_AUTH   = 'auth'
 API_RESULT_ALLOW  = 'allow'
 API_RESULT_DENY   = 'deny'
 API_RESULT_ENROLL = 'enroll'
+
+ca_certs = os.path.join(os.path.dirname(__file__), 'ca_certs.pem')
 
 def canonicalize(method, host, uri, params):
     canon = [method.upper(), host.lower(), uri]
@@ -40,12 +43,12 @@ def call(ikey, skey, host, method, path, **kwargs):
         body = None
         uri = path + '?' + urllib.urlencode(kwargs, doseq=True)
 
-    conn = httplib.HTTPSConnection(host, 443)
+    conn = CertValidatingHTTPSConnection(host, 443, ca_certs=ca_certs)
     conn.request(method, uri, body, headers)
     response = conn.getresponse()
     data = response.read()
     conn.close()
-    
+
     return (response.status, response.reason, data)
 
 def api(ikey, skey, host, method, path, **kwargs):

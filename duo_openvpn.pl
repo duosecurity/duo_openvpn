@@ -9,6 +9,7 @@ use MIME::Base64;
 use JSON::XS;
 use Digest::HMAC_SHA1 qw(hmac_sha1_hex);
 use Data::Dumper;
+use File::Spec;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Terse  = 1;
 
@@ -38,10 +39,18 @@ if (not $ikey or not $skey or not $host) {
     failure();
 }
 
+my $ca_certs = get_ca_certs();
+
 preauth();
 auth();
 failure();
 
+sub get_ca_certs {
+    my $abspath = File::Spec->rel2abs(__FILE__);
+    my ($volume, $directories, $file) = File::Spec->splitpath($abspath);
+
+    return File::Spec->catpath($volume, $directories, 'ca_certs.pem');
+}
 
 sub canonicalize {
     my $host   = shift;
@@ -72,7 +81,13 @@ sub sign {
 sub call {
     my ($ikey, $skey, $host, $path, $kwargs) = @_;
 
-    my $ua = LWP::UserAgent->new();
+    my $ssl_opts = {
+        verify_hostname => 1,
+        SSL_ca_file => $ca_certs,
+        SSL_ca_path => undef
+    };
+
+    my $ua = LWP::UserAgent->new(ssl_opts => $ssl_opts);
 
     $ua->default_header(
         'Authorization' => sign($ikey, $skey, $host, $path, $kwargs),
