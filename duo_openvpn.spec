@@ -1,6 +1,6 @@
 %define name	duo_openvpn
 %define version	0.1
-%define release 1
+%define release 2
 %define prefix	/usr
 
 %define mybuilddir %{_builddir}/%{name}-%{version}-root
