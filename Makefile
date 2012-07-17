@@ -27,7 +27,7 @@ ifeq ($(strip $(PYTHON)),)
 PYTHON=$(shell which python)
 endif
 
-all: prefix-updates ${NAME}.so
+all: prefix-updates ${NAME}.so ${NAME}_composite.so
 
 rpm: all
 	sh mkrpm.sh ${NAME}
@@ -46,8 +46,14 @@ ${NAME}.c: ${NAME}.c.in
 ${NAME}.o: ${NAME}.c
 	gcc $(CFLAGS) -fPIC -c ${NAME}.c
 
+${NAME}_composite.o: ${NAME}.c
+	gcc $(CFLAGS) -DCOMPOSITE_PASSWORD -fPIC -c ${NAME}.c -o $@
+
 ${NAME}.so: ${NAME}.o
 	gcc -fPIC -shared -Wl,-soname,${NAME}.so -o ${NAME}.so ${NAME}.o -lc
+
+${NAME}_composite.so: ${NAME}_composite.o
+	gcc -fPIC -shared -Wl,-soname,$@ -o $@ $< -lc
 
 install: ${NAME}.so
 	mkdir -p ${PREFIX}/bin
@@ -57,6 +63,7 @@ install: ${NAME}.so
 	install -c -m 755 ${NAME}.py ${PREFIX}/share/duo/${NAME}.pl
 	install -c -m 755 ${NAME}.py ${PREFIX}/share/duo/${NAME}.py
 	install -c -m 755 ${NAME}.so ${PREFIX}/lib/${NAME}.so
+	install -c -m 755 ${NAME}_composite.so ${PREFIX}/lib/${NAME}_composite.so
 	install -c -m 644 https_wrapper.py ${PREFIX}/share/duo/https_wrapper.py
 	ln -s ${PREFIX}/share/duo/${NAME}.${SUFFIX} ${PREFIX}/bin/${NAME}
 

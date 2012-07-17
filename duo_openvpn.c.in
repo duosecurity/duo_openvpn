@@ -68,6 +68,10 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		setenv("password", password, 1);
 		setenv("ipaddr", ipaddr, 1);
 
+#ifdef COMPOSITE_PASSWORD
+		setenv("composite_password", "true", 1);
+#endif
+
 		execvp(argv[0], argv);
 		exit(1);
 	}

@@ -1,6 +1,6 @@
 %define name	duo_openvpn
-%define version	0.1
-%define release 2
+%define version	0.2
+%define release 1
 %define prefix	/usr
 
 %define mybuilddir %{_builddir}/%{name}-%{version}-root
@@ -44,6 +44,7 @@ cp ca_certs.pem %{mybuilddir}%{prefix}/share/duo/ca_certs.pem
 cp %{name}.pl %{mybuilddir}%{prefix}/share/duo/%{name}.pl
 cp %{name}.py %{mybuilddir}%{prefix}/share/duo/%{name}.py
 cp %{name}.so %{mybuilddir}%{prefix}/lib/%{name}.so
+cp %{name}_composite.so %{mybuilddir}%{prefix}/lib/%{name}_composite.so
 cp https_wrapper.py %{mybuilddir}%{prefix}/share/duo/https_wrapper.py
 ln -s %{prefix}/share/duo/%{name}.py %{mybuilddir}%{prefix}/bin/%{name}
 
@@ -51,11 +52,15 @@ ln -s %{prefix}/share/duo/%{name}.py %{mybuilddir}%{prefix}/bin/%{name}
 %defattr(0755,root,root)
 %{prefix}/bin/%{name}
 %{prefix}/lib/%{name}.so
+%{prefix}/lib/%{name}_composite.so
 %{prefix}/share/duo/ca_certs.pem
 %{prefix}/share/duo/%{name}.pl
 %{prefix}/share/duo/%{name}.py
 %attr(0644,root,root)%{prefix}/share/duo/https_wrapper.py
 
 %changelog
+* Tue Jul 17 2012 Jan Schaumann <jschauma@etsy.com>
+- install two modules, one for 'composite' password, one regular
+
 * Mon Jul 09 2012 Jan Schaumann <jschauma@etsy.com>
 - first rpm version
