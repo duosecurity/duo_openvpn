@@ -60,7 +60,7 @@ install: ${NAME}.so
 	mkdir -p ${PREFIX}/lib
 	mkdir -p ${PREFIX}/share/duo
 	install -c -m 644 ca_certs.pem ${PREFIX}/share/duo/ca_certs.pem
-	install -c -m 755 ${NAME}.py ${PREFIX}/share/duo/${NAME}.pl
+	install -c -m 755 ${NAME}.pl ${PREFIX}/share/duo/${NAME}.pl
 	install -c -m 755 ${NAME}.py ${PREFIX}/share/duo/${NAME}.py
 	install -c -m 755 ${NAME}.so ${PREFIX}/lib/${NAME}.so
 	install -c -m 755 ${NAME}_composite.so ${PREFIX}/lib/${NAME}_composite.so
