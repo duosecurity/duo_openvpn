@@ -74,11 +74,6 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 
 		execvp(argv[0], argv);
 		exit(1);
-	} else {
-		/* If your connection is not particularly spiffy, then
-		 * openvpn may proceed and fail login even though this plugin
-		 * is still busy authenticating, so wait. */
-		wait();
 	}
 
 	return OPENVPN_PLUGIN_FUNC_DEFERRED;
