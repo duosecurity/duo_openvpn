@@ -7,13 +7,7 @@
 
 #include "openvpn-plugin.h"
 
-#ifndef USE_PERL
-#define INTERPRETER     "python"
-#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.py"
-#else
-#define INTERPRETER     "perl"
-#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.pl"
-#endif
+#define DUO_SCRIPT_PATH "__PREFIX__/bin/duo_openvpn"
 
 struct context {
 	char *ikey;
@@ -26,13 +20,13 @@ get_env(const char *name, const char *envp[])
 {
 	int i, namelen;
 	const char *cp;
-	
+
 	if (envp) {
 		namelen = strlen(name);
 		for (i = 0; envp[i]; ++i) {
 			if (!strncmp(envp[i], name, namelen)) {
 				cp = envp[i] + namelen;
-				if (*cp == '=') {
+					if (*cp == '=') {
 					return cp + 1;
 				}
 			}
@@ -46,8 +40,8 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 {
 	int pid;
 	const char *control, *username, *password, *ipaddr;
-	char *argv[] = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
-	
+	char *argv[] = { DUO_SCRIPT_PATH, NULL };
+
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
 	password = get_env("password", envp);
@@ -61,7 +55,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	if (pid < 0) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
-	
+
 	if (pid == 0) {
 		if (ctx->ikey && ctx->skey && ctx->host) {
 			setenv("ikey", ctx->ikey, 1);
@@ -73,6 +67,10 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		setenv("username", username, 1);
 		setenv("password", password, 1);
 		setenv("ipaddr", ipaddr, 1);
+
+#ifdef COMPOSITE_PASSWORD
+		setenv("composite_password", "true", 1);
+#endif
 
 		execvp(argv[0], argv);
 		exit(1);
@@ -97,7 +95,7 @@ OPENVPN_EXPORT openvpn_plugin_handle_t
 openvpn_plugin_open_v2(unsigned int *type_mask, const char *argv[], const char *envp[], struct openvpn_plugin_string_list **return_list)
 {
 	struct context *ctx;
-	
+
 	ctx = (struct context *) calloc(1, sizeof(struct context));
 
 	if (argv[1] && argv[2] && argv[3]) {

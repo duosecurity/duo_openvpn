@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!__PYTHON__
 #
 # duo_openvpn.py
 # Duo OpenVPN v1
@@ -13,7 +13,7 @@ API_RESULT_ALLOW  = 'allow'
 API_RESULT_DENY   = 'deny'
 API_RESULT_ENROLL = 'enroll'
 
-ca_certs = os.path.join(os.path.dirname(__file__), 'ca_certs.pem')
+ca_certs = '__PREFIX__/share/duo/ca_certs.pem';
 
 def canonicalize(method, host, uri, params):
     canon = [method.upper(), host.lower(), uri]
@@ -157,6 +157,18 @@ def main():
     username = os.environ.get('username')
     password = os.environ.get('password')
     ipaddr = os.environ.get('ipaddr', '0.0.0.0')
+
+    # A 'composite' password is one that combines a single password string
+    # for multiple authentication plugins, for example ldap authentication
+    # and duo.  'Composite' passwords are formed by combining two
+    # passwords with a comma, ie "<ldap>,<duo>".
+    composite = os.environ.get('composite_password')
+    if composite:
+        if "," in password:
+            password = password.split(',')[-1]
+        else:
+            log("no delimiter (',') found")
+            failure(control)
 
     if not control or not username or not password:
         log('required environment variables not found')

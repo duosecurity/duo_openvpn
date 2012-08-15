@@ -11,21 +11,21 @@
 # python-fu should fix this up.
 NAME=duo_openvpn
 
-ifndef PREFIX
+.if empty(PREFIX)
 PREFIX=/usr
-endif
+.endif
 
-ifdef USE_PERL
+.if !empty(USE_PERL)
 SUFFIX=pl
-else
+.else
 SUFFIX=py
-endif
+.endif
 
-PYTHON=$(shell which python26 2>/dev/null)
+PYTHON!=which python26 2>/dev/null || echo
 
-ifeq ($(strip $(PYTHON)),)
-PYTHON=$(shell which python)
-endif
+.if empty(${PYTHON})
+PYTHON!=which python
+.endif
 
 all: prefix-updates ${NAME}.so ${NAME}_composite.so
 
@@ -35,13 +35,13 @@ rpm: all
 prefix-updates: ${NAME}.c ${NAME}.py ${NAME}.pl
 
 ${NAME}.py: ${NAME}.py.in
-	sed -e "s|__PREFIX__|${PREFIX}|g" -e "s|__PYTHON__|${PYTHON}|g" $< > $@
+	sed -e "s|__PREFIX__|${PREFIX}|g" -e "s|__PYTHON__|${PYTHON}|g" $> > $@
 
 ${NAME}.pl: ${NAME}.pl.in
-	sed -e "s|__PREFIX__|${PREFIX}|g" $< > $@
+	sed -e "s|__PREFIX__|${PREFIX}|g" $> > $@
 
 ${NAME}.c: ${NAME}.c.in
-	sed -e "s|__PREFIX__|${PREFIX}|g" $< > $@
+	sed -e "s|__PREFIX__|${PREFIX}|g" $> > $@
 
 ${NAME}.o: ${NAME}.c
 	gcc $(CFLAGS) -fPIC -c ${NAME}.c
@@ -53,7 +53,7 @@ ${NAME}.so: ${NAME}.o
 	gcc -fPIC -shared -Wl,-soname,${NAME}.so -o ${NAME}.so ${NAME}.o -lc
 
 ${NAME}_composite.so: ${NAME}_composite.o
-	gcc -fPIC -shared -Wl,-soname,$@ -o $@ $< -lc
+	gcc -fPIC -shared -Wl,-soname,$@ -o $@ $> -lc
 
 install: ${NAME}.so
 	mkdir -p ${PREFIX}/bin

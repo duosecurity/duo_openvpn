@@ -1,4 +1,4 @@
-#/usr/bin/env perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -13,6 +13,8 @@ use File::Spec;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Terse  = 1;
 
+my $CA_CERTS_PEM = "__PREFIX__/share/duo/ca_certs.pem";
+
 my $API_RESULT_AUTH   = qr/^auth$/;
 my $API_RESULT_ALLOW  = qr/^allow$/;
 my $API_RESULT_DENY   = qr/^deny$/;
@@ -20,10 +22,19 @@ my $API_RESULT_ENROLL = qr/^enroll$/;
 
 openlog 'duo_openvpn.pl', 'pid', 'LOG_AUTH';
 
-my $control  = $ENV{'control'};
-my $username = $ENV{'username'};
-my $password = $ENV{'password'};
-my $ipaddr   = $ENV{'ipaddr'} || '0.0.0.0';
+my $composite = $ENV{'composite_password'};
+my $control   = $ENV{'control'};
+my $username  = $ENV{'username'};
+my $password  = $ENV{'password'};
+my $ipaddr    = $ENV{'ipaddr'} || '0.0.0.0';
+
+if ($composite) {
+	(undef,$password) = $password =~ m/(.*),(.*)/;
+	if (not $password) {
+		logger("no delimiter (',') found");
+		exit 1;
+	}
+}
 
 if (not $control or not $username or not $password) {
     logger('required environmental variables not found');
@@ -39,18 +50,9 @@ if (not $ikey or not $skey or not $host) {
     failure();
 }
 
-my $ca_certs = get_ca_certs();
-
 preauth();
 auth();
 failure();
-
-sub get_ca_certs {
-    my $abspath = File::Spec->rel2abs(__FILE__);
-    my ($volume, $directories, $file) = File::Spec->splitpath($abspath);
-
-    return File::Spec->catpath($volume, $directories, 'ca_certs.pem');
-}
 
 sub canonicalize {
     my $host   = shift;
@@ -83,7 +85,7 @@ sub call {
 
     my $ssl_opts = {
         verify_hostname => 1,
-        SSL_ca_file => $ca_certs,
+        SSL_ca_file => $CA_CERTS_PEM,
         SSL_ca_path => undef
     };
 
