@@ -22,10 +22,19 @@ my $API_RESULT_ENROLL = qr/^enroll$/;
 
 openlog 'duo_openvpn.pl', 'pid', 'LOG_AUTH';
 
-my $control  = $ENV{'control'};
-my $username = $ENV{'username'};
-my $password = $ENV{'password'};
-my $ipaddr   = $ENV{'ipaddr'} || '0.0.0.0';
+my $composite = $ENV{'composite_password'};
+my $control   = $ENV{'control'};
+my $username  = $ENV{'username'};
+my $password  = $ENV{'password'};
+my $ipaddr    = $ENV{'ipaddr'} || '0.0.0.0';
+
+if ($composite) {
+	(undef,$password) = $password =~ m/(.*),(.*)/;
+	if (not $password) {
+		logger("no delimiter (',') found");
+		exit 1;
+	}
+}
 
 if (not $control or not $username or not $password) {
     logger('required environmental variables not found');
