@@ -57,28 +57,31 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
+	/* prevent leaving behind zombies */
+	signal(SIGCHLD, SIG_IGN);
+
 	pid = fork();
 	if (pid < 0) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
+
+	if (pid > 0) {
+		return OPENVPN_PLUGIN_FUNC_DEFERRED;
+	}
 	
-	if (pid == 0) {
-		if (ctx->ikey && ctx->skey && ctx->host) {
-			setenv("ikey", ctx->ikey, 1);
-			setenv("skey", ctx->skey, 1);
-			setenv("host", ctx->host, 1);
-		}
-
-		setenv("control", control, 1);
-		setenv("username", username, 1);
-		setenv("password", password, 1);
-		setenv("ipaddr", ipaddr, 1);
-
-		execvp(argv[0], argv);
-		exit(1);
+	if (ctx->ikey && ctx->skey && ctx->host) {
+		setenv("ikey", ctx->ikey, 1);
+		setenv("skey", ctx->skey, 1);
+		setenv("host", ctx->host, 1);
 	}
 
-	return OPENVPN_PLUGIN_FUNC_DEFERRED;
+	setenv("control", control, 1);
+	setenv("username", username, 1);
+	setenv("password", password, 1);
+	setenv("ipaddr", ipaddr, 1);
+
+	execvp(argv[0], argv);
+	exit(1);
 }
 
 OPENVPN_EXPORT int
