@@ -33,7 +33,12 @@ def sign(ikey, skey, method, host, uri, params):
     return 'Basic %s' % base64.b64encode(auth)
 
 def call(ikey, skey, host, method, path, **kwargs):
-    headers = {'Authorization':sign(ikey, skey, method, host, path, kwargs)}
+    sig = sign(ikey, skey, method, host, path, kwargs)
+
+    headers = {
+        'Authorization': sig,
+        'User-agent': 'duo_openvpn/1.0',
+    }
 
     if method in [ 'POST', 'PUT' ]:
         headers['Content-type'] = 'application/x-www-form-urlencoded'
