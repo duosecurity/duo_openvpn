@@ -5,8 +5,19 @@
 # Copyright 2011 Duo Security, Inc.
 #
 
-import os, sys, urllib, hashlib, hmac, base64, json, syslog
-from https_wrapper import CertValidatingHTTPSConnection
+import syslog, sys
+
+def log(msg):
+    msg = 'Duo OpenVPN: %s' % msg
+    syslog.syslog(msg)
+
+try:
+    import os, urllib, hashlib, hmac, base64, json
+    from https_wrapper import CertValidatingHTTPSConnection
+except ImportError, e:
+    log('ImportError: %s' % e)
+    log('Please make sure you\'re running Python 2.6 or newer')
+    raise
 
 API_RESULT_AUTH   = 'auth'
 API_RESULT_ALLOW  = 'allow'
@@ -68,10 +79,6 @@ def api(ikey, skey, host, method, path, **kwargs):
         return data['response']
     except (ValueError, KeyError):
         raise RuntimeError('Received bad response: %s' % data)
-
-def log(msg):
-    msg = 'Duo OpenVPN: %s' % msg
-    syslog.syslog(msg)
 
 def success(control):
     log('writing success code to %s' % control)
