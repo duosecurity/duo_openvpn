@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-#
-# Adapted from:
-# https://googleappengine.googlecode.com/svn-history/r136/trunk/python/google/appengine/tools/https_wrapper.py
-#
+### The following code was adapted from:
+### https://googleappengine.googlecode.com/svn-history/r136/trunk/python/google/appengine/tools/https_wrapper.py
+
 # Copyright 2007 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +46,7 @@ class InvalidCertificateException(httplib.HTTPException):
             'To learn more, see '
             'http://code.google.com/appengine/kb/general.html#rpcssl' %
             (self.host, self.reason, self.cert))
+
 
 class CertValidatingHTTPSConnection(httplib.HTTPConnection):
   """An HTTPConnection that connects over SSL and validates certificates."""
@@ -109,9 +108,11 @@ class CertValidatingHTTPSConnection(httplib.HTTPConnection):
 
   def connect(self):
     "Connect to a host on a given (SSL) port."
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((self.host, self.port))
-    self.sock = ssl.wrap_socket(sock, keyfile=self.key_file,
+    self.sock = socket.create_connection((self.host, self.port),
+                                         self.timeout)
+    if self._tunnel_host:
+      self._tunnel()
+    self.sock = ssl.wrap_socket(self.sock, keyfile=self.key_file,
                                 certfile=self.cert_file,
                                 cert_reqs=self.cert_reqs,
                                 ca_certs=self.ca_certs)

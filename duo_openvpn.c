@@ -20,6 +20,8 @@ struct context {
 	char *ikey;
 	char *skey;
 	char *host;
+	char *proxy_host;
+	char *proxy_port;
 };
 
 static const char *
@@ -74,6 +76,18 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		setenv("ikey", ctx->ikey, 1);
 		setenv("skey", ctx->skey, 1);
 		setenv("host", ctx->host, 1);
+		if (ctx->proxy_host) {
+			setenv("proxy_host", ctx->proxy_host, 1);
+		}
+		else {
+			unsetenv("proxy_host");
+		}
+		if (ctx->proxy_port) {
+			setenv("proxy_port", ctx->proxy_port, 1);
+		}
+		else {
+			unsetenv("proxy_port");
+		}
 	}
 
 	setenv("control", control, 1);
@@ -110,6 +124,23 @@ openvpn_plugin_open_v2(unsigned int *type_mask, const char *argv[], const char *
 		ctx->host = strdup(argv[3]);
 	}
 
+	/* Passing proxy_host even if proxy_port is not present
+	 * generates a more informative log message.
+	 */
+	if (argv[4]) {
+		ctx->proxy_host = strdup(argv[4]);
+		if (argv[5]) {
+			ctx->proxy_port = strdup(argv[5]);
+		}
+		else {
+			ctx->proxy_port = NULL;
+		}
+	}
+	else {
+		ctx->proxy_host = NULL;
+		ctx->proxy_port = NULL;
+	}
+
 	*type_mask = OPENVPN_PLUGIN_MASK(OPENVPN_PLUGIN_AUTH_USER_PASS_VERIFY);
 
 	return (openvpn_plugin_handle_t) ctx;
@@ -123,5 +154,11 @@ openvpn_plugin_close_v1(openvpn_plugin_handle_t handle)
 	free(ctx->ikey);
 	free(ctx->skey);
 	free(ctx->host);
+	if (ctx->proxy_host) {
+		free(ctx->proxy_host);
+	}
+	if (ctx->proxy_port) {
+		free(ctx->proxy_port);
+	}
 	free(ctx);
 }
