@@ -311,7 +311,7 @@ def preauth(client, control, username):
 
     result = response.get('result')
     if result == API_RESULT_AUTH:
-        return
+        return response['factors'].get('default')
 
     status = response.get('status')
     if not status:
@@ -364,7 +364,7 @@ def main(Client=Client, environ=os.environ):
     password = environ.get('password')
     ipaddr = environ.get('ipaddr', '0.0.0.0')
 
-    if not control or not username or not password:
+    if not control or not username:
         log('required environment variables not found')
         sys.exit(1)
 
@@ -389,10 +389,17 @@ def main(Client=Client, environ=os.environ):
         )
 
     try:
-        preauth(client, control, username)
+        default_factor = preauth(client, control, username)
     except Exception, e:
         log(str(e))
         failure(control)
+
+    if not (password or default_factor):
+        log('no password provided and no out-of-band factors '
+            'available for username {0:s}'.format(username))
+        failure(control)
+    elif not password:
+        password = default_factor
 
     try:
         auth(client, control, username, password, ipaddr)
