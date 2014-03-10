@@ -8,10 +8,10 @@ endif
 all: duo_openvpn.so
 
 duo_openvpn.o: duo_openvpn.c
-	gcc $(CFLAGS) -fPIC -c duo_openvpn.c
+	cc $(CFLAGS) -fPIC -c duo_openvpn.c
 
 duo_openvpn.so: duo_openvpn.o
-	gcc -fPIC -shared -Wl,-soname,duo_openvpn.so -o duo_openvpn.so duo_openvpn.o -lc
+	cc -fPIC -shared -Wl,-soname,duo_openvpn.so -o duo_openvpn.so duo_openvpn.o -lc
 
 install: duo_openvpn.so
 	mkdir -p /opt/duo
