@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+import sys
+import argparse
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--prefix', dest='prefix', action='store', default='/opt/duo')
+
+    opts = parser.parse_args()
+    write_config(opts)
+
+def write_config(opts):
+    config_h = open('config.h', 'w')
+    config_mk = open('config.mk', 'w')
+
+    config_h.write('#define DESTDIR "%s"\n' % opts.prefix)
+    config_mk.write('DESTDIR="%s"\n' % opts.prefix)
+
+    config_h.close()
+    config_mk.close()
+
+if __name__ == '__main__':
+    main()
