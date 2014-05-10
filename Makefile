@@ -7,7 +7,14 @@ endif
 
 include config.mk
 
-all: duo_openvpn.so
+all: CONFIG duo_openvpn.so
+
+config.mk:
+	@echo "No configuration found. Creating a default configuration."
+	@echo "Rerun make to use defaults, or run ./configure --help to see options."
+	./configure
+	@false
+
 
 duo_openvpn.o: duo_openvpn.c
 	cc $(CFLAGS) -fPIC -c duo_openvpn.c
@@ -40,3 +47,6 @@ uninstall:
 
 clean:
 	rm -f *.so *.o
+
+CONFIG: config.mk
+.PHONY: CONFIG
