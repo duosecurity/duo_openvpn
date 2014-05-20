@@ -10,10 +10,10 @@
 
 #ifndef USE_PERL
 #define INTERPRETER     "python"
-#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.py"
+#define DUO_SCRIPT_PATH PREFIX "/duo_openvpn.py"
 #else
 #define INTERPRETER     "perl"
-#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.pl"
+#define DUO_SCRIPT_PATH PREFIX "/duo_openvpn.pl"
 #endif
 
 struct context {
