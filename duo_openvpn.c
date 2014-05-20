@@ -6,14 +6,15 @@
 #include <unistd.h>
 #include <syslog.h>
 
+#include "config.h"
 #include "openvpn-plugin.h"
 
 #ifndef USE_PERL
 #define INTERPRETER     "python"
-#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.py"
+#define DUO_SCRIPT_PATH DESTDIR "/duo_openvpn.py"
 #else
 #define INTERPRETER     "perl"
-#define DUO_SCRIPT_PATH "/opt/duo/duo_openvpn.pl"
+#define DUO_SCRIPT_PATH DESTDIR "/duo_openvpn.pl"
 #endif
 
 struct context {
@@ -29,7 +30,7 @@ get_env(const char *name, const char *envp[])
 {
 	int i, namelen;
 	const char *cp;
-	
+
 	if (envp) {
 		namelen = strlen(name);
 		for (i = 0; envp[i]; ++i) {
@@ -50,7 +51,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	int pid;
 	const char *control, *username, *password, *ipaddr;
 	char *argv[] = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
-	
+
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
 	password = get_env("password", envp);
@@ -71,7 +72,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	if (pid > 0) {
 		return OPENVPN_PLUGIN_FUNC_DEFERRED;
 	}
-	
+
 	if (ctx->ikey && ctx->skey && ctx->host) {
 		setenv("ikey", ctx->ikey, 1);
 		setenv("skey", ctx->skey, 1);
@@ -115,7 +116,7 @@ OPENVPN_EXPORT openvpn_plugin_handle_t
 openvpn_plugin_open_v2(unsigned int *type_mask, const char *argv[], const char *envp[], struct openvpn_plugin_string_list **return_list)
 {
 	struct context *ctx;
-	
+
 	ctx = (struct context *) calloc(1, sizeof(struct context));
 
 	if (argv[1] && argv[2] && argv[3]) {
