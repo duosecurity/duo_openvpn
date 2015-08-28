@@ -95,6 +95,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
     char filename[128];
     
 	
+
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
 	password = get_env("password", envp);
@@ -145,7 +146,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
     
 #if !defined(_MSVC)
     
-    strcat(filename, STR(PREFIX));
+    strcpy(filename, PREFIX);
     strcat(filename, DUO_SCRIPT);
     
     argv[0] = INTERPRETER;
