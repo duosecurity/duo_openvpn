@@ -3,18 +3,30 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <signal.h>
-#include <unistd.h>
-#include <syslog.h>
+
+#if defined(_MSVC)
+# include <io.h>
+# define SETENV(x, y) setenv_msvc(x, y)
+# define UNSETENV(x) unsetenv_msvc(x)
+#else
+# include <unistd.h>
+# include <syslog.h>
+# define SETENV(x, y) setenv_posix(x, y)
+# define UNSETENV(x) unsetenv_posix(x)
+#endif
 
 #include "openvpn-plugin.h"
 
 #ifndef USE_PERL
 #define INTERPRETER     "python"
-#define DUO_SCRIPT_PATH PREFIX "/duo_openvpn.py"
+#define DUO_SCRIPT "duo_openvpn.py"
 #else
 #define INTERPRETER     "perl"
-#define DUO_SCRIPT_PATH PREFIX "/duo_openvpn.pl"
+#define DUO_SCRIPT "duo_openvpn.pl"
 #endif
+
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
 
 struct context {
 	char *ikey;
@@ -23,6 +35,32 @@ struct context {
 	char *proxy_host;
 	char *proxy_port;
 };
+
+static void 
+setenv_msvc(const char *name, const char *value)
+{
+#if defined(_MSVC)
+    _putenv_s(name, value);
+#endif
+}
+
+static void 
+setenv_posix(const char *name, const char *value)
+{
+    setenv(name, value, 1);
+}
+
+static void 
+unsetenv_msvc(const char *name)
+{
+    // No equivalent found yet
+}
+
+static void 
+unsetenv_posix(const char *name)
+{
+    unsetenv(name);
+}
 
 static const char *
 get_env(const char *name, const char *envp[])
@@ -49,7 +87,13 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 {
 	int pid;
 	const char *control, *username, *password, *ipaddr;
-	char *argv[] = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
+    char *argv[3]; // = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
+    
+    FILE   *pPipe;
+    char   psBuffer[128];
+    
+    char filename[128];
+    
 	
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
@@ -60,10 +104,12 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
+#if !defined(_MSVC)
+    
 	/* prevent leaving behind zombies */
 	signal(SIGCHLD, SIG_IGN);
 
-	pid = fork();
+    pid = fork();
 	if (pid < 0) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
@@ -71,32 +117,69 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	if (pid > 0) {
 		return OPENVPN_PLUGIN_FUNC_DEFERRED;
 	}
+    
+#endif    
 	
 	if (ctx->ikey && ctx->skey && ctx->host) {
-		setenv("ikey", ctx->ikey, 1);
-		setenv("skey", ctx->skey, 1);
-		setenv("host", ctx->host, 1);
+		SETENV("ikey", ctx->ikey);
+		SETENV("skey", ctx->skey);
+		SETENV("host", ctx->host);
 		if (ctx->proxy_host) {
-			setenv("proxy_host", ctx->proxy_host, 1);
+			SETENV("proxy_host", ctx->proxy_host);
 		}
 		else {
-			unsetenv("proxy_host");
+            UNSETENV("proxy_host");
 		}
 		if (ctx->proxy_port) {
-			setenv("proxy_port", ctx->proxy_port, 1);
+			SETENV("proxy_port", ctx->proxy_port);
 		}
 		else {
-			unsetenv("proxy_port");
+            UNSETENV("proxy_port");
 		}
 	}
 
-	setenv("control", control, 1);
-	setenv("username", username, 1);
-	setenv("password", password, 1);
-	setenv("ipaddr", ipaddr, 1);
-
-	execvp(argv[0], argv);
+	SETENV("control", control);
+	SETENV("username", username);
+	SETENV("password", password);
+	SETENV("ipaddr", ipaddr);
+    
+#if !defined(_MSVC)
+    
+    strcat(filename, STR(PREFIX));
+    strcat(filename, DUO_SCRIPT);
+    
+    argv[0] = INTERPRETER;
+    argv[1] = filename;
+    argv[2] = NULL;
+    
+    execvp(argv[0], argv);
 	exit(1);
+    
+#else
+    
+    strcpy(filename, INTERPRETER);
+    strcat(filename, " ");
+    strcat(filename, STR(PREFIX));
+    strcat(filename, DUO_SCRIPT);
+
+    if( (pPipe = _popen( filename, "rt" )) == NULL )
+      return OPENVPN_PLUGIN_FUNC_ERROR;
+
+    /* Read pipe until end of file, or an error occurs. */
+    while(fgets(psBuffer, 128, pPipe)) { } 
+
+    /* Close pipe and print return value of pPipe or exit */
+    if (feof( pPipe))
+    {
+      return _pclose( pPipe );
+    }
+    else
+    {
+      exit(1);
+    }
+    
+#endif
+
 }
 
 OPENVPN_EXPORT int
@@ -115,7 +198,7 @@ OPENVPN_EXPORT openvpn_plugin_handle_t
 openvpn_plugin_open_v2(unsigned int *type_mask, const char *argv[], const char *envp[], struct openvpn_plugin_string_list **return_list)
 {
 	struct context *ctx;
-	
+    
 	ctx = (struct context *) calloc(1, sizeof(struct context));
 
 	if (argv[1] && argv[2] && argv[3]) {
