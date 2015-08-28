@@ -1,4 +1,4 @@
-PREFIX=/opt/duo
+PREFIX=/opt/duo/
 CFLAGS += -DPREFIX='"$(PREFIX)"'
 
 ifdef USE_PERL
