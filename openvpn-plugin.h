@@ -119,7 +119,7 @@ typedef void *openvpn_plugin_handle_t;
 #define OPENVPN_PLUGIN_FUNC_DEFERRED 2
 
 /*
- * For Windows (needs to be modified for MSVC)
+ * For Windows MING32 and MSVC (compiler option _MSVC must be defined)
  */
 #if !defined(OPENVPN_PLUGIN_H)
 # if defined(__MINGW32_VERSION) || defined(_MSVC)
