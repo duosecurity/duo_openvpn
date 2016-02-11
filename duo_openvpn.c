@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -60,9 +61,6 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
-	/* prevent leaving behind zombies */
-	signal(SIGCHLD, SIG_IGN);
-
 	pid = fork();
 	if (pid < 0) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
@@ -71,7 +69,15 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	if (pid > 0) {
 		return OPENVPN_PLUGIN_FUNC_DEFERRED;
 	}
-	
+
+	/* daemonize so PID 1 can reap */
+	umask(0);
+	setsid();
+	chdir("/");
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
 	if (ctx->ikey && ctx->skey && ctx->host) {
 		setenv("ikey", ctx->ikey, 1);
 		setenv("skey", ctx->skey, 1);
