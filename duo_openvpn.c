@@ -60,9 +60,6 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
-	/* prevent leaving behind zombies */
-	signal(SIGCHLD, SIG_IGN);
-
 	pid = fork();
 	if (pid < 0) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
