@@ -84,12 +84,12 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 
 	pid = fork();
 	if (pid < 0) {
-		return OPENVPN_PLUGIN_FUNC_ERROR;
+		exit(OPENVPN_PLUGIN_FUNC_ERROR);
 	}
 
 	if (pid > 0) {
 		/* first child forked ok, pass deferred return up to parent openvpn process */
-		return OPENVPN_PLUGIN_FUNC_DEFERRED;
+		exit(OPENVPN_PLUGIN_FUNC_DEFERRED);
 	}
 
 	/* second child daemonizes so PID 1 can reap */
