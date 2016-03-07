@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ get_env(const char *name, const char *envp[])
 {
 	int i, namelen;
 	const char *cp;
-	
+
 	if (envp) {
 		namelen = strlen(name);
 		for (i = 0; envp[i]; ++i) {
@@ -50,7 +51,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	int pid;
 	const char *control, *username, *password, *ipaddr;
 	char *argv[] = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
-	
+
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
 	password = get_env("password", envp);
@@ -60,18 +61,45 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
-	/* prevent leaving behind zombies */
-	signal(SIGCHLD, SIG_IGN);
-
 	pid = fork();
 	if (pid < 0) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
 	if (pid > 0) {
-		return OPENVPN_PLUGIN_FUNC_DEFERRED;
+		int status;
+
+		/* openvpn process forked ok, wait for first child to exit and return its status */
+		pid = waitpid(pid, &status, 0);
+		if (pid < 0) {
+			return OPENVPN_PLUGIN_FUNC_ERROR;
+		}
+
+		if (WIFEXITED(status)) {
+			return WEXITSTATUS(status);
+		}
+
+		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
-	
+
+	pid = fork();
+	if (pid < 0) {
+		exit(OPENVPN_PLUGIN_FUNC_ERROR);
+	}
+
+	if (pid > 0) {
+		/* first child forked ok, pass deferred return up to parent openvpn process */
+		exit(OPENVPN_PLUGIN_FUNC_DEFERRED);
+	}
+
+	/* second child daemonizes so PID 1 can reap */
+	umask(0);
+	setsid();
+	chdir("/");
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+
 	if (ctx->ikey && ctx->skey && ctx->host) {
 		setenv("ikey", ctx->ikey, 1);
 		setenv("skey", ctx->skey, 1);
@@ -115,7 +143,7 @@ OPENVPN_EXPORT openvpn_plugin_handle_t
 openvpn_plugin_open_v2(unsigned int *type_mask, const char *argv[], const char *envp[], struct openvpn_plugin_string_list **return_list)
 {
 	struct context *ctx;
-	
+
 	ctx = (struct context *) calloc(1, sizeof(struct context));
 
 	if (argv[1] && argv[2] && argv[3]) {
