@@ -8,6 +8,10 @@ else
 SCRIPT_NAME=duo_openvpn.py
 endif
 
+ifdef IS_BSD_10
+CFLAGS += -DIS_BSD_10
+endif
+
 all: duo_openvpn.so
 
 duo_openvpn.o: duo_openvpn.c

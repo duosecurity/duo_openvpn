@@ -11,7 +11,13 @@
 #include "openvpn-plugin.h"
 
 #ifndef USE_PERL
+
+#ifdef  IS_BSD_10
+#define INTERPRETER     "/usr/local/bin/python2.7"
+#else
 #define INTERPRETER     "python"
+#endif
+
 #define DUO_SCRIPT_PATH PREFIX "/duo_openvpn.py"
 #else
 #define INTERPRETER     "perl"
