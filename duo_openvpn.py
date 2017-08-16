@@ -4,7 +4,7 @@
 # Duo OpenVPN
 # Copyright 2013 Duo Security, Inc.
 
-__version__ = '2.1'
+__version__ = '2.2'
 
 import base64
 import email.utils
