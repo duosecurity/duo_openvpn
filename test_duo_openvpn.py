@@ -120,7 +120,7 @@ class TestIntegration(unittest.TestCase):
             meth.AndReturn(response)
             self.expected_calls.close()
 
-    def expect_preauth(self, result, path=EXPECTED_PREAUTH_PATH):
+    def expect_preauth(self, result, path=EXPECTED_PREAUTH_PATH, factor='push1'):
         self.expect_request(
             method='POST',
             path=path,
@@ -132,6 +132,7 @@ class TestIntegration(unittest.TestCase):
                         'response': {
                             'result': result,
                             'status': 'expected status',
+                            'factors': {'default': factor},
                         },
                 }),
             ),
@@ -384,16 +385,12 @@ class TestIntegration(unittest.TestCase):
         )
 
     def test_missing_password(self):
-        environ = {
-            'ikey': self.IKEY,
-            'skey': self.SKEY,
-            'host': self.HOST,
-            'username': self.USERNAME,
-            'ipaddr': self.IPADDR,
-        }
+        environ = self.normal_environ()
+        del environ['password']
+        self.expect_preauth('auth', factor=None)
         self.assert_auth(
             environ=environ,
-            expected_control='',
+            expected_control='0',
         )
 
     def test_missing_ikey(self):
