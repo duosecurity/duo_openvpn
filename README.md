@@ -1,5 +1,7 @@
 # Overview
 
+[![Build Status](https://travis-ci.org/duosecurity/duo_openvpn.svg?branch=master)](https://travis-ci.org/duosecurity/duo_openvpn)
+
 **duo_openvpn** - Duo two-factor authentication for OpenVPN
 
 # Usage
