@@ -50,13 +50,18 @@ static int
 auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[])
 {
 	int pid;
-	const char *control, *username, *password, *ipaddr;
+	const char *control, *username, *password, *ipaddr, *ipaddr6;
 	char *argv[] = { INTERPRETER, DUO_SCRIPT_PATH, NULL };
 
 	control = get_env("auth_control_file", envp);
 	username = get_env("common_name", envp);
 	password = get_env("password", envp);
 	ipaddr = get_env("untrusted_ip", envp);
+	ipaddr6 = get_env("untrusted_ip6", envp);
+
+	if (ipaddr6) {
+		ipaddr = ipaddr6;
+	}
 
 	if (!control || !username || !password || !ipaddr) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
