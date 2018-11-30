@@ -46,7 +46,10 @@ class TestIntegration(unittest.TestCase):
     PROXY_HOST = 'expected proxy host'
     PROXY_PORT = 'expected proxy port'
     EXPECTED_USER_AGENT = 'duo_openvpn/' + duo_openvpn.__version__
-    EXPECTED_PREAUTH_PARAMS = 'user=expected+username'
+    EXPECTED_PREAUTH_PARAMS = (
+        'user=expected+username'
+        '&ipaddr=expected_ipaddr'
+    )
     EXPECTED_AUTH_PATH = '/rest/v1/auth'
     EXPECTED_PREAUTH_PATH = '/rest/v1/preauth'
     EXPECTED_AUTH_PARAMS = (
