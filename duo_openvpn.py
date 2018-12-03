@@ -302,11 +302,12 @@ def failure(control):
 
     sys.exit(1)
 
-def preauth(client, control, username):
+def preauth(client, control, username, ipaddr):
     log('pre-authentication for %s' % username)
 
     response = client.json_api_call('POST', '/rest/v1/preauth', {
-            'user': username,
+        'user': username,
+        'ipaddr': ipaddr
     })
 
     result = response.get('result')
@@ -389,7 +390,7 @@ def main(Client=Client, environ=os.environ):
         )
 
     try:
-        default_factor = preauth(client, control, username)
+        default_factor = preauth(client, control, username, ipaddr)
     except Exception, e:
         log(str(e))
         failure(control)
