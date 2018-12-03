@@ -47,8 +47,8 @@ class TestIntegration(unittest.TestCase):
     PROXY_PORT = 'expected proxy port'
     EXPECTED_USER_AGENT = 'duo_openvpn/' + duo_openvpn.__version__
     EXPECTED_PREAUTH_PARAMS = (
-        'user=expected+username'
-        '&ipaddr=expected_ipaddr'
+        'ipaddr=expected_ipaddr'
+        '&user=expected+username'
     )
     EXPECTED_AUTH_PATH = '/rest/v1/auth'
     EXPECTED_PREAUTH_PATH = '/rest/v1/preauth'
@@ -333,7 +333,23 @@ class TestIntegration(unittest.TestCase):
     def test_auth_no_ipaddr(self):
         environ = self.normal_environ()
         environ.pop('ipaddr')
-        self.expect_preauth('auth')
+        self.expect_request(
+            method='POST',
+            path=self.EXPECTED_PREAUTH_PATH,
+            params='ipaddr=0.0.0.0'
+                   '&user=expected+username',
+            response=MockResponse(
+                status=200,
+                body=json.dumps({
+                        'stat': 'OK',
+                        'response': {
+                            'result': 'auth',
+                            'status': 'expected status',
+                            'factors': {'default': 'push1'},
+                        },
+                }),
+            ),
+        )
         self.expect_request(
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
