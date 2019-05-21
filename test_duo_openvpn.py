@@ -113,8 +113,20 @@ class TestIntegration(unittest.TestCase):
         )
         return environ
 
-    def expect_request(self, method, path, params, response=None, raises=None):
-        self.expected_calls.request(method, path, params, {
+    def compare_preauth_params(self, params):
+        param_stanzas = params.split('&')
+        return len(self.EXPECTED_PREAUTH_PARAMS.split('&')) == len(param_stanzas) and \
+               all([s in self.EXPECTED_PREAUTH_PARAMS for s in param_stanzas])
+
+    def compare_auth_params(self, params):
+        param_stanzas = params.split('&')
+        return len(self.EXPECTED_AUTH_PARAMS.split('&')) == len(param_stanzas) and \
+               all([s in self.EXPECTED_AUTH_PARAMS for s in param_stanzas])
+
+    def expect_request(self, method, path, params, params_func=None, response=None, raises=None):
+        if params_func == None:
+            params_func = self.compare_preauth_params
+        self.expected_calls.request(method, path, mox.Func(params_func), {
                 'User-Agent': self.EXPECTED_USER_AGENT,
                 'Host': self.HOST,
                 'Content-type': 'application/x-www-form-urlencoded',
@@ -152,6 +164,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=path,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func=self.compare_auth_params,
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -285,6 +298,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func=self.compare_auth_params,
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -307,6 +321,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func=self.compare_auth_params,
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -329,6 +344,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func=self.compare_auth_params,
             raises=Exception('whoops'),
         )
         self.assert_auth(
@@ -337,13 +353,20 @@ class TestIntegration(unittest.TestCase):
         )
 
     def test_auth_no_ipaddr(self):
+        preauth_noip_params='ipaddr=0.0.0.0' \
+            '&user=expected+username'
+        def compare_preauth_noip_params(params):
+            param_stanzas = params.split('&')
+            return len(preauth_noip_params.split('&')) == len(param_stanzas) and \
+                   all([s in preauth_noip_params for s in param_stanzas])
+
         environ = self.normal_environ()
         environ.pop('ipaddr')
         self.expect_request(
             method='POST',
             path=self.EXPECTED_PREAUTH_PATH,
-            params='ipaddr=0.0.0.0'
-                   '&user=expected+username',
+            params=preauth_noip_params,
+            params_func=compare_preauth_noip_params,
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -356,15 +379,19 @@ class TestIntegration(unittest.TestCase):
                 }),
             ),
         )
+        auth_noip_params='auto=expected+passcode' \
+            '&ipaddr=0.0.0.0' \
+            '&user=expected+username' \
+            '&factor=auto'
+        def compare_auth_noip_params(params):
+            param_stanzas = params.split('&')
+            return len(auth_noip_params.split('&')) == len(param_stanzas) and \
+                   all([s in auth_noip_params for s in param_stanzas])
         self.expect_request(
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
-            params=(
-                'auto=expected+passcode'
-                '&ipaddr=0.0.0.0'
-                '&user=expected+username'
-                '&factor=auto'
-            ),
+            params=auth_noip_params,
+            params_func=compare_auth_noip_params,
             response=MockResponse(
                 status=200,
                 body=json.dumps({
