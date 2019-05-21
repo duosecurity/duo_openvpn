@@ -8,12 +8,18 @@ __version__ = '2.2'
 
 import base64
 import email.utils
-import httplib
+try:
+    import httplib
+except ImportError:
+    import http.client as httplib
 import os
 import socket
 import sys
 import syslog
-import urllib
+try:
+    from urllib import quote, urlencode
+except ImportError:
+    from urllib.parse import quote, urlencode
 
 def log(msg):
     msg = 'Duo OpenVPN: %s' % msg
@@ -24,7 +30,7 @@ try:
     import hmac
     import json
     from https_wrapper import CertValidatingHTTPSConnection
-except ImportError, e:
+except ImportError as e:
     log('ImportError: %s' % e)
     log('Please make sure you\'re running Python 2.6 or newer')
     raise
@@ -44,8 +50,8 @@ def canon_params(params):
     # http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
     args = []
     for (key, vals) in sorted(
-        (urllib.quote(key, '~'), vals) for (key, vals) in params.items()):
-        for val in sorted(urllib.quote(val, '~') for val in vals):
+        (quote(key, '~'), vals) for (key, vals) in params.items()):
+        for val in sorted(quote(val, '~') for val in vals):
             args.append('%s=%s' % (key, val))
     return '&'.join(args)
 
@@ -163,11 +169,11 @@ class Client(object):
 
         if method in ['POST', 'PUT']:
             headers['Content-type'] = 'application/x-www-form-urlencoded'
-            body = urllib.urlencode(params, doseq=True)
+            body = urlencode(params, doseq=True)
             uri = path
         else:
             body = None
-            uri = path + '?' + urllib.urlencode(params, doseq=True)
+            uri = path + '?' + urlencode(params, doseq=True)
 
         return self._make_request(method, uri, body, headers)
 
@@ -391,7 +397,7 @@ def main(Client=Client, environ=os.environ):
 
     try:
         default_factor = preauth(client, control, username, ipaddr)
-    except Exception, e:
+    except Exception as e:
         log(str(e))
         failure(control)
 
@@ -404,7 +410,7 @@ def main(Client=Client, environ=os.environ):
 
     try:
         auth(client, control, username, password, ipaddr)
-    except Exception, e:
+    except Exception as e:
         log(str(e))
         failure(control)
 

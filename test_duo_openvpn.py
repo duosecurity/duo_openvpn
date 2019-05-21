@@ -1,11 +1,17 @@
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    import io as StringIO
 import email.utils
 import json
 import os
 import tempfile
 import unittest
 
-import mox
+try:
+    import mox
+except ImportError:
+    from mox3 import mox
 
 import duo_openvpn
 

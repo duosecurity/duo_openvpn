@@ -19,10 +19,16 @@
 """Extensions to allow HTTPS requests with SSL certificate validation."""
 
 
-import httplib
+try:
+    import httplib
+except ImportError:
+    import http.client as httplib
 import re
 import socket
-import urllib2
+try:
+    import urllib2
+except ImportError:
+    import urllib.request as urllib2
 import ssl
 
 
@@ -139,7 +145,7 @@ class CertValidatingHTTPSHandler(urllib2.HTTPSHandler):
       return CertValidatingHTTPSConnection(host, **full_kwargs)
     try:
       return self.do_open(http_class_wrapper, req)
-    except urllib2.URLError, e:
+    except urllib2.URLError as e:
       if type(e.reason) == ssl.SSLError and e.reason.args[0] == 1:
         raise InvalidCertificateException(req.host, '',
                                           e.reason.args[1])
