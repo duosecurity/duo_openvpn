@@ -78,12 +78,10 @@ def sign(ikey, skey, method, host, uri, date, sig_version, params):
     """
     Return basic authorization header line with a Duo Web API signature.
     """
-    canonical = canonicalize(method, host, uri, params, date, sig_version)
-    if isinstance(skey, unicode):
-        skey = skey.encode('utf-8')
-    sig = hmac.new(skey, canonical, hashlib.sha1)
+    canonical = canonicalize(method, host, uri, params, date, sig_version).encode('utf-8')
+    sig = hmac.new(skey.encode('utf-8'), canonical, hashlib.sha1)
     auth = '%s:%s' % (ikey, sig.hexdigest())
-    return 'Basic %s' % base64.b64encode(auth)
+    return 'Basic %s' % base64.b64encode(auth.encode('utf-8'))
 
 def normalize_params(params):
     """
@@ -92,16 +90,12 @@ def normalize_params(params):
     """
     # urllib cannot handle unicode strings properly. quote() excepts,
     # and urlencode() replaces them with '?'.
-    def encode(value):
-        if isinstance(value, unicode):
-            return value.encode("utf-8")
-        return value
     def to_list(value):
-        if value is None or isinstance(value, basestring):
+        if not value or not isinstance(value, list):
             return [value]
         return value
     return dict(
-        (encode(key), [encode(v) for v in to_list(value)])
+        (key.encode('utf-8'), [v.encode('utf-8') for v in to_list(value)])
         for (key, value) in params.items())
 
 class Client(object):
