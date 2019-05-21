@@ -25,7 +25,7 @@ def mock_client_factory(mock):
     class MockClient(duo_openvpn.Client):
         def __init__(self, *args, **kwargs):
             mock.duo_client_init(*args, **kwargs)
-            return super(MockClient, self).__init__(*args, **kwargs)
+            super(MockClient, self).__init__(*args, **kwargs)
 
         def set_proxy(self, *args, **kwargs):
             mock.duo_client_set_proxy(*args, **kwargs)
