@@ -124,7 +124,7 @@ class TestIntegration(unittest.TestCase):
                 'User-Agent': self.EXPECTED_USER_AGENT,
                 'Host': self.HOST,
                 'Content-type': 'application/x-www-form-urlencoded',
-                'Authorization': mox.Func((lambda s: s.startswith('Basic '))),
+                'Authorization': mox.Func((lambda s: s.startswith('Basic ') and not s.startswith('Basic b\''))),
                 'Date': mox.Func((lambda s: bool(email.utils.parsedate_tz(s))))
             },
         )
