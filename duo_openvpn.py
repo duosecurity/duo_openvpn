@@ -81,7 +81,7 @@ def sign(ikey, skey, method, host, uri, date, sig_version, params):
     canonical = canonicalize(method, host, uri, params, date, sig_version).encode('utf-8')
     sig = hmac.new(skey.encode('utf-8'), canonical, hashlib.sha1)
     auth = '%s:%s' % (ikey, sig.hexdigest())
-    return 'Basic %s' % base64.b64encode(auth.encode('utf-8'))
+    return 'Basic %s' % base64.b64encode(auth.encode('utf-8')).decode('utf-8')
 
 def normalize_params(params):
     """
