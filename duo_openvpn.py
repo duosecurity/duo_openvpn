@@ -277,7 +277,7 @@ class Client(object):
                     response.reason,
             ))
         try:
-            data = json.loads(data)
+            data = json.loads(data.decode('utf-8'))
             if data['stat'] != 'OK':
                 raise_error('Received error response: %s' % data)
             return data['response']
