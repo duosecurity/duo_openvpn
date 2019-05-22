@@ -277,7 +277,9 @@ class Client(object):
                     response.reason,
             ))
         try:
-            data = json.loads(data.decode('utf-8'))
+            if not isinstance(data, str):
+                data = data.decode('utf-8')
+            data = json.loads(data)
             if data['stat'] != 'OK':
                 raise_error('Received error response: %s' % data)
             return data['response']
