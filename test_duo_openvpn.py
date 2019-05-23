@@ -8,10 +8,7 @@ import os
 import tempfile
 import unittest
 
-try:
-    import mox
-except ImportError:
-    from mox3 import mox
+from mox3 import mox
 
 import duo_openvpn
 
