@@ -8,18 +8,14 @@ __version__ = '2.2'
 
 import base64
 import email.utils
-try:
-    import httplib
-except ImportError:
-    import http.client as httplib
 import os
 import socket
 import sys
 import syslog
-try:
-    from urllib import quote, urlencode
-except ImportError:
-    from urllib.parse import quote, urlencode
+
+import six
+from six.moves import http_client
+from six.moves.urllib import quote, urlencode
 
 def log(msg):
     msg = 'Duo OpenVPN: %s' % msg
@@ -78,10 +74,25 @@ def sign(ikey, skey, method, host, uri, date, sig_version, params):
     """
     Return basic authorization header line with a Duo Web API signature.
     """
-    canonical = canonicalize(method, host, uri, params, date, sig_version).encode('utf-8')
-    sig = hmac.new(skey.encode('utf-8'), canonical, hashlib.sha1)
+    canonical = canonicalize(method, host, uri, params, date, sig_version)
+
+    if isinstance(skey, six.text_type):
+        skey = skey.encode('utf-8')
+    if isinstance(canonical, six.text_type):
+        canonical = canonical.encode('utf-8')
+
+    sig = hmac.new(skey, canonical, hashlib.sha1)
     auth = '%s:%s' % (ikey, sig.hexdigest())
-    return 'Basic %s' % base64.b64encode(auth.encode('utf-8')).decode('utf-8')
+
+    if isinstance(auth, six.text_type):
+        auth = auth.encode('utf-8')
+
+    b64 = base64.b64encode(auth)
+    if not isinstance(b64, six.text_type):
+        b64 = b64.decode('utf-8')
+
+    return 'Basic %s' % b64
+
 
 def normalize_params(params):
     """
@@ -90,13 +101,20 @@ def normalize_params(params):
     """
     # urllib cannot handle unicode strings properly. quote() excepts,
     # and urlencode() replaces them with '?'.
+    def encode(value):
+        if isinstance(value, six.text_type):
+            return value.encode("utf-8")
+        return value
+
     def to_list(value):
-        if not value or not isinstance(value, list):
+        if value is None or isinstance(value, six.string_types):
             return [value]
         return value
+
     return dict(
-        (key.encode('utf-8'), [v.encode('utf-8') for v in to_list(value)])
-        for (key, value) in params.items())
+        (encode(key), [encode(v) for v in to_list(value)])
+        for (key, value) in list(params.items()))
+
 
 class Client(object):
     sig_version = 1
@@ -192,9 +210,9 @@ class Client(object):
 
         # Create outer HTTP(S) connection.
         if self.ca_certs == 'HTTP':
-            conn = httplib.HTTPConnection(host, port)
+            conn = http_client.HTTPConnection(host, port)
         elif self.ca_certs == 'DISABLE':
-            conn = httplib.HTTPSConnection(host, port)
+            conn = http_client.HTTPSConnection(host, port)
         else:
             conn = CertValidatingHTTPSConnection(host,
                                                  port,
@@ -255,6 +273,10 @@ class Client(object):
             error.reason = response.reason
             error.data = data
             raise error
+
+        if not isinstance(data, six.text_type):
+            data = data.decode('utf-8')
+
         if response.status != 200:
             try:
                 data = json.loads(data)
@@ -277,8 +299,6 @@ class Client(object):
                     response.reason,
             ))
         try:
-            if not isinstance(data, str):
-                data = data.decode('utf-8')
             data = json.loads(data)
             if data['stat'] != 'OK':
                 raise_error('Received error response: %s' % data)
@@ -411,6 +431,7 @@ def main(Client=Client, environ=os.environ):
         failure(control)
 
     failure(control)
+
 
 if __name__ == '__main__':
     main()
