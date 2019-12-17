@@ -81,7 +81,7 @@ class TestIntegration(unittest.TestCase):
             control.seek(0, os.SEEK_SET)
             output = control.read()
             if not isinstance(output, six.text_type):
-                output = output.decode('ascii')
+                output = output.decode('utf-8')
             self.assertEqual(expected_control, output)
             if expected_control == '1':
                 self.assertEqual(0, cm.exception.args[0])

@@ -77,11 +77,11 @@ def sign(ikey, skey, method, host, uri, date, sig_version, params):
     canonical = canonicalize(method, host, uri, params, date, sig_version)
 
     if isinstance(skey, six.text_type):
-        skey = skey.encode('utf-8')
+        skey_bytes = skey.encode('utf-8')
     if isinstance(canonical, six.text_type):
-        canonical = canonical.encode('utf-8')
+        canonical_bytes = canonical.encode('utf-8')
 
-    sig = hmac.new(skey, canonical, hashlib.sha1)
+    sig = hmac.new(skey_bytes, canonical_bytes, hashlib.sha1)
     auth = '%s:%s' % (ikey, sig.hexdigest())
 
     if isinstance(auth, six.text_type):
