@@ -80,8 +80,10 @@ class TestIntegration(unittest.TestCase):
 
             control.seek(0, os.SEEK_SET)
             output = control.read()
+            if not isinstance(output, six.text_type):
+                output = output.decode('ascii')
             self.assertEqual(expected_control, output)
-            if expected_control == b'1':
+            if expected_control == '1':
                 self.assertEqual(0, cm.exception.args[0])
             else:
                 self.assertEqual(1, cm.exception.args[0])
@@ -170,7 +172,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_preauth('allow')
         self.assert_auth(
             environ=environ,
-            expected_control=b'1',
+            expected_control='1',
         )
 
     def test_preauth_deny(self):
@@ -178,7 +180,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_preauth('deny')
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_preauth_enroll(self):
@@ -186,7 +188,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_preauth('enroll')
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_preauth_bogus(self):
@@ -194,7 +196,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_preauth('bogus')
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_preauth_missing_result(self):
@@ -215,7 +217,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_preauth_missing_status(self):
@@ -236,7 +238,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_preauth_exception(self):
@@ -249,7 +251,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_auth_allow(self):
@@ -258,7 +260,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_auth('allow')
         self.assert_auth(
             environ=environ,
-            expected_control=b'1',
+            expected_control='1',
         )
 
     def test_auth_deny(self):
@@ -267,7 +269,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_auth('deny')
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_auth_bogus(self):
@@ -276,7 +278,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_auth('bogus')
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_auth_missing_reason(self):
@@ -299,7 +301,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_auth_missing_status(self):
@@ -322,7 +324,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_auth_exception(self):
@@ -337,7 +339,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_auth_no_ipaddr(self):
@@ -384,7 +386,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'1',
+            expected_control='1',
         )
 
     def test_missing_control(self):
@@ -399,7 +401,7 @@ class TestIntegration(unittest.TestCase):
         self.assert_auth(
             environ=environ,
             send_control=False,
-            expected_control=b'',
+            expected_control='',
         )
 
     def test_missing_username(self):
@@ -412,7 +414,7 @@ class TestIntegration(unittest.TestCase):
         }
         self.assert_auth(
             environ=environ,
-            expected_control=b'',
+            expected_control='',
         )
 
     def test_missing_password(self):
@@ -421,7 +423,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_preauth('auth', factor=None)
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_missing_ikey(self):
@@ -434,7 +436,7 @@ class TestIntegration(unittest.TestCase):
         }
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_missing_skey(self):
@@ -447,7 +449,7 @@ class TestIntegration(unittest.TestCase):
         }
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_missing_host(self):
@@ -460,7 +462,7 @@ class TestIntegration(unittest.TestCase):
         }
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_proxy_success(self):
@@ -481,7 +483,7 @@ class TestIntegration(unittest.TestCase):
         )
         self.assert_auth(
             environ=environ,
-            expected_control=b'1',
+            expected_control='1',
         )
 
     def test_proxy_missing_port(self):
@@ -489,7 +491,7 @@ class TestIntegration(unittest.TestCase):
         environ['proxy_host'] = self.PROXY_HOST
         self.assert_auth(
             environ=environ,
-            expected_control=b'0',
+            expected_control='0',
         )
 
     def test_proxy_missing_host(self):
@@ -500,7 +502,7 @@ class TestIntegration(unittest.TestCase):
         self.expect_auth('allow')
         self.assert_auth(
             environ=environ,
-            expected_control=b'1',
+            expected_control='1',
         )
 
 if __name__ == '__main__':
