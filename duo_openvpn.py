@@ -15,7 +15,7 @@ import syslog
 
 import six
 from six.moves import http_client
-from six.moves.urllib import quote, urlencode
+from six.moves.urllib.parse import quote, urlencode
 
 def log(msg):
     msg = 'Duo OpenVPN: %s' % msg
