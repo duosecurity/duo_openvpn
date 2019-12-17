@@ -23,7 +23,7 @@ install: duo_openvpn.so
 ifdef USE_PERL
 	install -c duo_openvpn.pl -m 755 $(DESTDIR)$(PREFIX)
 else
-	install -c duo_openvpn.py https_wrapper.py -m 755 $(DESTDIR)$(PREFIX)
+	install -c duo_openvpn.py https_wrapper.py six.py -m 755 $(DESTDIR)$(PREFIX)
 endif
 
 uninstall:
@@ -32,6 +32,7 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/duo_openvpn.pl
 	rm -f $(DESTDIR)$(PREFIX)/duo_openvpn.py
 	rm -f $(DESTDIR)$(PREFIX)/https_wrapper.py
+	rm -f $(DESTDIR)$(PREFIX)/six.py
 
 clean:
 	rm -f *.so *.o
