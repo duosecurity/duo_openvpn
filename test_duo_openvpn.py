@@ -1,7 +1,3 @@
-try:
-    import StringIO
-except ImportError:
-    import io as StringIO
 import email.utils
 import json
 import os
@@ -9,6 +5,7 @@ import tempfile
 import unittest
 
 from mox3 import mox
+import six
 
 import duo_openvpn
 
@@ -33,7 +30,7 @@ def mock_client_factory(mock):
 
     return MockClient
 
-class MockResponse(StringIO.StringIO, object):
+class MockResponse(six.StringIO, object):
     def __init__(self, status, body, reason='some reason'):
         self.status = status
         self.reason = reason
