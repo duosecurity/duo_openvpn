@@ -1,11 +1,11 @@
-import StringIO
 import email.utils
 import json
 import os
 import tempfile
 import unittest
 
-import mox
+from mox3 import mox
+import six
 
 import duo_openvpn
 
@@ -19,7 +19,7 @@ def mock_client_factory(mock):
     class MockClient(duo_openvpn.Client):
         def __init__(self, *args, **kwargs):
             mock.duo_client_init(*args, **kwargs)
-            return super(MockClient, self).__init__(*args, **kwargs)
+            super(MockClient, self).__init__(*args, **kwargs)
 
         def set_proxy(self, *args, **kwargs):
             mock.duo_client_set_proxy(*args, **kwargs)
@@ -30,7 +30,7 @@ def mock_client_factory(mock):
 
     return MockClient
 
-class MockResponse(StringIO.StringIO, object):
+class MockResponse(six.StringIO, object):
     def __init__(self, status, body, reason='some reason'):
         self.status = status
         self.reason = reason
@@ -80,6 +80,8 @@ class TestIntegration(unittest.TestCase):
 
             control.seek(0, os.SEEK_SET)
             output = control.read()
+            if not isinstance(output, six.text_type):
+                output = output.decode('utf-8')
             self.assertEqual(expected_control, output)
             if expected_control == '1':
                 self.assertEqual(0, cm.exception.args[0])
@@ -107,12 +109,18 @@ class TestIntegration(unittest.TestCase):
         )
         return environ
 
-    def expect_request(self, method, path, params, response=None, raises=None):
-        self.expected_calls.request(method, path, params, {
+    def compare_params(self, recv_params, sent_params):
+        stanzas = sent_params.split('&')
+        return len(recv_params.split('&')) == len(stanzas) and all([s in recv_params for s in stanzas])
+
+    def expect_request(self, method, path, params, params_func=None, response=None, raises=None):
+        if params_func == None:
+            params_func = lambda p: self.compare_params(p, self.EXPECTED_PREAUTH_PARAMS)
+        self.expected_calls.request(method, path, mox.Func(params_func), {
                 'User-Agent': self.EXPECTED_USER_AGENT,
                 'Host': self.HOST,
                 'Content-type': 'application/x-www-form-urlencoded',
-                'Authorization': mox.Func((lambda s: s.startswith('Basic '))),
+                'Authorization': mox.Func((lambda s: s.startswith('Basic ') and not s.startswith('Basic b\''))),
                 'Date': mox.Func((lambda s: bool(email.utils.parsedate_tz(s))))
             },
         )
@@ -146,6 +154,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=path,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func = lambda p: self.compare_params(p, self.EXPECTED_AUTH_PARAMS),
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -279,6 +288,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func = lambda p: self.compare_params(p, self.EXPECTED_AUTH_PARAMS),
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -301,6 +311,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func = lambda p: self.compare_params(p, self.EXPECTED_AUTH_PARAMS),
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -323,6 +334,7 @@ class TestIntegration(unittest.TestCase):
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
             params=self.EXPECTED_AUTH_PARAMS,
+            params_func = lambda p: self.compare_params(p, self.EXPECTED_AUTH_PARAMS),
             raises=Exception('whoops'),
         )
         self.assert_auth(
@@ -331,13 +343,15 @@ class TestIntegration(unittest.TestCase):
         )
 
     def test_auth_no_ipaddr(self):
+        preauth_noip_params='ipaddr=0.0.0.0' \
+            '&user=expected+username'
         environ = self.normal_environ()
         environ.pop('ipaddr')
         self.expect_request(
             method='POST',
             path=self.EXPECTED_PREAUTH_PATH,
-            params='ipaddr=0.0.0.0'
-                   '&user=expected+username',
+            params=preauth_noip_params,
+            params_func = lambda p: self.compare_params(p, preauth_noip_params),
             response=MockResponse(
                 status=200,
                 body=json.dumps({
@@ -350,15 +364,15 @@ class TestIntegration(unittest.TestCase):
                 }),
             ),
         )
+        auth_noip_params='auto=expected+passcode' \
+            '&ipaddr=0.0.0.0' \
+            '&user=expected+username' \
+            '&factor=auto'
         self.expect_request(
             method='POST',
             path=self.EXPECTED_AUTH_PATH,
-            params=(
-                'auto=expected+passcode'
-                '&ipaddr=0.0.0.0'
-                '&user=expected+username'
-                '&factor=auto'
-            ),
+            params=auth_noip_params,
+            params_func = lambda p: self.compare_params(p, auth_noip_params),
             response=MockResponse(
                 status=200,
                 body=json.dumps({
