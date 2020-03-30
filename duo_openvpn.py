@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+#!/bin/sh
+''''which python3  >/dev/null 2>&1 && exec python3  "$0" "$@" # '''
+''''which python  >/dev/null 2>&1 && exec python  "$0" "$@" # '''
+''''which python2 >/dev/null 2>&1 && exec python2 "$0" "$@" # '''
+''''exec echo "Error: No python module found in system"# '''
 #
 # duo_openvpn.py
 # Duo OpenVPN
