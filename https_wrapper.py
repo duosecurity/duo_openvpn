@@ -113,10 +113,16 @@ class CertValidatingHTTPSConnection(http_client.HTTPConnection):
                                          self.timeout)
     if self._tunnel_host:
       self._tunnel()
-    self.sock = ssl.wrap_socket(self.sock, keyfile=self.key_file,
-                                certfile=self.cert_file,
-                                cert_reqs=self.cert_reqs,
-                                ca_certs=self.ca_certs)
+
+    context = ssl.create_default_context()
+    context.load_verify_locations(cafile=self.ca_certs)
+
+    if self.cert_file:
+        context.load_cert_chain(self.cert_file, keyfile=self.key_file)
+
+    context.options = self.cert_reqs
+    self.sock = context.wrap_socket(self.sock, server_hostname=self.host)
+
     if self.cert_reqs & ssl.CERT_REQUIRED:
       cert = self.sock.getpeercert()
       cert_validation_host = self._tunnel_host or self.host
