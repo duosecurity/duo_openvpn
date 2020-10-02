@@ -120,7 +120,7 @@ class CertValidatingHTTPSConnection(http_client.HTTPConnection):
     if self.cert_file:
         context.load_cert_chain(self.cert_file, keyfile=self.key_file)
 
-    context.options = self.cert_reqs
+    context.options = self.cert_reqs | ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
     self.sock = context.wrap_socket(self.sock, server_hostname=self.host)
 
     if self.cert_reqs & ssl.CERT_REQUIRED:
