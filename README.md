@@ -1,6 +1,6 @@
 # Overview
 
-[![Build Status](https://travis-ci.org/duosecurity/duo_openvpn.svg?branch=master)](https://travis-ci.org/duosecurity/duo_openvpn)
+[![Build Status](https://github.com/duosecurity/duo_openvpn/workflows/OpenVPN%20Python%20component%20CI/badge.svg)](https://github.com/duosecurity/duo_openvpn/actions)
 [![Issues](https://img.shields.io/github/issues/duosecurity/duo_openvpn)](https://github.com/duosecurity/duo_openvpn/issues)
 [![Forks](https://img.shields.io/github/forks/duosecurity/duo_openvpn)](https://github.com/duosecurity/duo_openvpn/network/members)
 [![Stars](https://img.shields.io/github/stars/duosecurity/duo_openvpn)](https://github.com/duosecurity/duo_openvpn/stargazers)
