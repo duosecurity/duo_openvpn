@@ -24,7 +24,23 @@ struct context {
 	char *host;
 	char *proxy_host;
 	char *proxy_port;
+	struct username_password *username_password_auth;
+	struct certificate *certificate_auth;
 	plugin_log_t plugin_log;
+};
+
+struct username_password {
+	int enabled;
+	int phone_challenge_enabled;
+	int push_challenge_enabled;
+};
+
+struct certificate {
+	int enabled;
+	int phone_challenge_enabled;
+	int push_challenge_enabled;
+	int sms_challenge_enabled;
+	int backup_code_challenge_enabled;
 };
 
 static const char *
@@ -58,15 +74,55 @@ static int
 auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[])
 {
 	int pid;
-	const char *control, *username, *password, *ipaddr;
+	const char *control, *username, *challenge_type, *ipaddr;
 	char *argv[] = { DUO_SCRIPT_PATH, NULL };
 
 	control = get_env("auth_control_file", envp);
-	username = get_env("common_name", envp);
-	password = get_env("password", envp);
 	ipaddr = get_env("untrusted_ip", envp);
 
-	if (!control || !username || !password || !ipaddr) {
+	int matched = 0;
+	if (ctx->certificate_auth->enabled) {
+		const char *potential_username = get_env("common_name", envp);
+		const char *potential_challenge_type = get_env("password", envp);
+		if (NULL != potential_username && NULL != potential_challenge_type) {
+			username = potential_username;
+			if (ctx->certificate_auth->push_challenge_enabled && !strcmp("push", potential_challenge_type)) {
+				challenge_type = "push";
+			}
+			else if (ctx->certificate_auth->phone_challenge_enabled && !strcmp("phone", potential_challenge_type)) {
+				challenge_type = "phone";
+			}
+			else if (ctx->certificate_auth->sms_challenge_enabled && !strcmp("sms", potential_challenge_type)) {
+				challenge_type = "sms";
+			}
+			else if (ctx->certificate_auth->backup_code_challenge_enabled) {
+				challenge_type = potential_challenge_type;
+			}
+			else {
+				ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "Provided password does not match any enabled challenge type");
+				return OPENVPN_PLUGIN_FUNC_ERROR;
+			}
+			ctx->plugin_log(PLOG_NOTE, PLUGIN_NAME, "Performing challenge for certificate authentication for user %s", username);
+			matched = 1;
+		}
+	}
+
+	if (matched == 0 && ctx->username_password_auth) {
+		const char *potential_username = get_env("username", envp);
+		if (NULL != potential_username) {
+			username = potential_username;
+			if (ctx->username_password_auth->push_challenge_enabled) {
+				challenge_type = "push";
+			}
+			else {
+				challenge_type = "phone";
+			}
+			ctx->plugin_log(PLOG_NOTE, PLUGIN_NAME, "Performing challenge for username and password authentication for user %s", username);
+		}
+	}
+
+	if (!control || !username || !challenge_type || !ipaddr) {
+		ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "One or more required authentication parameters were not provided");
 		return OPENVPN_PLUGIN_FUNC_ERROR;
 	}
 
@@ -129,7 +185,7 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 
 	setenv("control", control, 1);
 	setenv("username", username, 1);
-	setenv("password", password, 1);
+	setenv("challenge_type", challenge_type, 1);
 	setenv("ipaddr", ipaddr, 1);
 
 	execvp(argv[0], argv);
@@ -188,6 +244,54 @@ load_configuration_file(const char *file_path, struct context *ctx)
 			continue;
 		}
 
+		const char *potential_username_password_auth_enabled = get_variable("username-password-auth-enabled", line, ' ');
+		if (potential_username_password_auth_enabled) {
+			ctx->username_password_auth->enabled = !strcmp(potential_username_password_auth_enabled, "true");
+			continue;
+		}
+
+		const char *potential_username_password_phone_challenge_enabled = get_variable("username-password-phone-challenge-enabled", line, ' ');
+		if (potential_username_password_phone_challenge_enabled) {
+			ctx->username_password_auth->phone_challenge_enabled = !strcmp(potential_username_password_phone_challenge_enabled, "true");
+			continue;
+		}
+
+		const char *potential_username_password_push_challenge_enabled = get_variable("username-password-push-challenge-enabled", line, ' ');
+		if (potential_username_password_push_challenge_enabled) {
+			ctx->username_password_auth->push_challenge_enabled = !strcmp(potential_username_password_push_challenge_enabled, "true");
+			continue;
+		}
+
+		const char *potential_certificate_auth_enabled = get_variable("certificate-auth-enabled", line, ' ');
+		if (potential_certificate_auth_enabled) {
+			ctx->certificate_auth->enabled = !strcmp(potential_certificate_auth_enabled, "true");
+			continue;
+		}
+
+		const char *potential_certificate_push_challenge_enabled = get_variable("certificate-push-challenge-enabled", line, ' ');
+		if (potential_certificate_push_challenge_enabled) {
+			ctx->certificate_auth->push_challenge_enabled = !strcmp(potential_certificate_push_challenge_enabled, "true");
+			continue;
+		}
+
+		const char *potential_certificate_phone_challenge_enabled = get_variable("certificate-phone-challenge-enabled", line, ' ');
+		if (potential_certificate_phone_challenge_enabled) {
+			ctx->certificate_auth->phone_challenge_enabled = !strcmp(potential_certificate_phone_challenge_enabled, "true");
+			continue;
+		}
+
+		const char *potential_certificate_sms_challenge_enabled = get_variable("certificate-sms-challenge-enabled", line, ' ');
+		if (potential_certificate_sms_challenge_enabled) {
+			ctx->certificate_auth->sms_challenge_enabled = !strcmp(potential_certificate_sms_challenge_enabled, "true");
+			continue;
+		}
+
+		const char *potential_certificate_backup_code_challenge_enabled = get_variable("certificate-backup-code-challenge-enabled", line, ' ');
+		if (potential_certificate_backup_code_challenge_enabled) {
+			ctx->certificate_auth->backup_code_challenge_enabled = !strcmp(potential_certificate_backup_code_challenge_enabled, "true");
+			continue;
+		}
+
 		ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "Unknown configuration entry in file '%s': %s", file_path, line);
 		return 0;
 	}
@@ -213,6 +317,8 @@ openvpn_plugin_open_v3(const int v3structver, const struct openvpn_plugin_args_o
 	struct context *ctx;
 
 	ctx = (struct context *) calloc(1, sizeof(struct context));
+	ctx->certificate_auth = calloc(1, sizeof(struct certificate));
+	ctx->username_password_auth = calloc(1, sizeof(struct username_password));
 	ctx->plugin_log = args->callbacks->plugin_log;
 
 	const char **argv = args->argv;
@@ -237,6 +343,12 @@ openvpn_plugin_open_v3(const int v3structver, const struct openvpn_plugin_args_o
 			ctx->ikey = strdup(argv[1]);
 			ctx->skey = strdup(argv[2]);
 			ctx->host = strdup(argv[3]);
+			ctx->username_password_auth->enabled = 0;
+			ctx->certificate_auth->enabled = 1;
+			ctx->certificate_auth->push_challenge_enabled = 1;
+			ctx->certificate_auth->phone_challenge_enabled = 1;
+			ctx->certificate_auth->sms_challenge_enabled = 1;
+			ctx->certificate_auth->backup_code_challenge_enabled = 1;
 		}
 
 		/* Passing proxy_host even if proxy_port is not present
@@ -270,6 +382,28 @@ openvpn_plugin_open_v3(const int v3structver, const struct openvpn_plugin_args_o
 		ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "Secret Key is not specified in plugin configuration");
 		success = 0;
 	}
+	if (ctx->username_password_auth->enabled == 1) {
+		if (ctx->username_password_auth->push_challenge_enabled == ctx->username_password_auth->phone_challenge_enabled) {
+			if (ctx->username_password_auth->push_challenge_enabled) {
+				ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "Only one of phone or push challenges can be enabled for username and password based authentication");
+			}
+			else {
+				ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "One of phone or push challenges must be enabled for username and password based authentication");
+			}
+			success = 0;
+		}
+	}
+	if (ctx->certificate_auth->enabled == 1) {
+		// SMS isn't checked here since it can't be used for challenging auth - only for requesting a fall-back code - so wouldn't be any use as the only configured option
+		if (ctx->certificate_auth->push_challenge_enabled + ctx->certificate_auth->phone_challenge_enabled + ctx->certificate_auth->backup_code_challenge_enabled < 1) {
+			ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "One of phone, push, or backup code challenges must be enabled for certificate based authentication");
+			success = 0;
+		}
+	}
+	if (ctx->certificate_auth->enabled + ctx->username_password_auth->enabled < 1) {
+		ctx->plugin_log(PLOG_ERR, PLUGIN_NAME, "One of certificate or username and password authentication must be enabled");
+		success = 0;
+	}
 
 	if (success != 1) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
@@ -296,5 +430,7 @@ openvpn_plugin_close_v1(openvpn_plugin_handle_t handle)
 	if (ctx->proxy_port) {
 		free(ctx->proxy_port);
 	}
+	free(ctx->certificate_auth);
+	free(ctx->username_password_auth);
 	free(ctx);
 }
