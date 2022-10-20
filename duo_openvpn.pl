@@ -7,7 +7,7 @@ use Sys::Syslog qw(:standard);
 use URI::Escape;
 use MIME::Base64;
 use JSON::XS;
-use Digest::HMAC_SHA1 qw(hmac_sha1_hex);
+use Digest::SHA qw(hmac_sha512_hex);
 use Data::Dumper;
 use File::Spec;
 $Data::Dumper::Indent = 0;
@@ -72,7 +72,7 @@ sub canonicalize {
 sub sign {
     my ($ikey, $skey, $host, $path, $args) = @_;
 
-    my $sig = hmac_sha1_hex(canonicalize($host, $path, $args), $skey);
+    my $sig = hmac_sha512_hex(canonicalize($host, $path, $args), $skey);
     my $auth = "$ikey:$sig";
     return 'Basic ' . encode_base64($auth, '');
 }
