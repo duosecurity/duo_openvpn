@@ -43,7 +43,7 @@ For OpenVPN 2.3 or earlier, append the following line to it:
 plugin /opt/duo/duo_openvpn.so IKEY SKEY HOST
 ```
 
-We recommend setting the reng-sec option in the server configuration file. This option will determine how often OpenVPN forces a renegotiation, requiring the user to reauthenticate with Duo every hour. If your user's VPN client saves the password and automatically reauthenticates with it, this may cause issues. Therefore, we recommend disabling reneg-sec by setting it to 0:
+We recommend setting the reneg-sec option in the server configuration file. This option will determine how often OpenVPN forces a renegotiation, requiring the user to reauthenticate with Duo every hour. If your user's VPN client saves the password and automatically reauthenticates with it, this may cause issues. Therefore, we recommend disabling reneg-sec by setting it to 0:
 
 ```
 reneg-sec 0
