@@ -12,6 +12,10 @@
 
 Python 3 or 2.7 needs to be installed on your OpenVPN server.
 
+## TLS 1.2 and 1.3 Support
+
+The OpenVPN plugin uses Python's ssl module and OpenSSL for TLS operations. Python versions 2.7 (and higher) and 3.5 (and higher) have both TLS 1.2 and TLS 1.3 support.
+
 ## Development:
 
 Download the [Duo OpenVPN v2.4 plugin](https://github.com/duosecurity/duo_openvpn/archive/2.4.tar.gz) by clicking this link or by downloading the ZIP for this repository. Then extract it, build, and install the plugin.
