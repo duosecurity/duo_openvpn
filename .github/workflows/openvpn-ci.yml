@@ -9,6 +9,7 @@ on:
 
 jobs:
   test:
+    name: OpenVPN - test
     runs-on: ubuntu-latest
 
     strategy:
