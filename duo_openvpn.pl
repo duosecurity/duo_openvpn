@@ -20,12 +20,12 @@ my $API_RESULT_ENROLL = qr/^enroll$/;
 
 openlog 'duo_openvpn.pl', 'pid', 'LOG_AUTH';
 
-my $control  = $ENV{'control'};
-my $username = $ENV{'username'};
-my $password = $ENV{'password'};
-my $ipaddr   = $ENV{'ipaddr'} || '0.0.0.0';
+my $control        = $ENV{'control'};
+my $username       = $ENV{'username'};
+my $challenge_type = $ENV{'challenge_type'};
+my $ipaddr         = $ENV{'ipaddr'} || '0.0.0.0';
 
-if (not $control or not $username or not $password) {
+if (not $control or not $username or not $challenge_type) {
     logger('required environmental variables not found');
     exit 1;
 }
@@ -141,7 +141,7 @@ sub auth {
     my $args = {
         'user'   => $username,
         'factor' => 'auto',
-        'auto'   => $password,
+        'auto'   => $challenge_type,
         'ipaddr' => $ipaddr,
     };
 

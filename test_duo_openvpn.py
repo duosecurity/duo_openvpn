@@ -41,7 +41,7 @@ class TestIntegration(unittest.TestCase):
     SKEY = 'expected skey'
     HOST = 'expected hostname'
     USERNAME = 'expected username'
-    PASSCODE = 'expected passcode'
+    CHALLENGE_TYPE = 'expected challenge-type'
     IPADDR = 'expected_ipaddr'
     PROXY_HOST = 'expected proxy host'
     PROXY_PORT = 'expected proxy port'
@@ -53,7 +53,7 @@ class TestIntegration(unittest.TestCase):
     EXPECTED_AUTH_PATH = '/rest/v1/auth'
     EXPECTED_PREAUTH_PATH = '/rest/v1/preauth'
     EXPECTED_AUTH_PARAMS = (
-        'auto=expected+passcode'
+        'auto=expected+challenge-type'
         '&ipaddr=expected_ipaddr'
         '&user=expected+username'
         '&factor=auto'
@@ -94,7 +94,7 @@ class TestIntegration(unittest.TestCase):
             'skey': self.SKEY,
             'host': self.HOST,
             'username': self.USERNAME,
-            'password': self.PASSCODE,
+            'challenge_type': self.CHALLENGE_TYPE,
             'ipaddr': self.IPADDR,
         }
         self.expected_calls.duo_client_init(
@@ -364,7 +364,7 @@ class TestIntegration(unittest.TestCase):
                 }),
             ),
         )
-        auth_noip_params='auto=expected+passcode' \
+        auth_noip_params='auto=expected+challenge-type' \
             '&ipaddr=0.0.0.0' \
             '&user=expected+username' \
             '&factor=auto'
@@ -394,7 +394,7 @@ class TestIntegration(unittest.TestCase):
             'ikey': self.IKEY,
             'skey': self.SKEY,
             'host': self.HOST,
-            'password': self.PASSCODE,
+            'challenge_type': self.CHALLENGE_TYPE,
             'username': self.USERNAME,
             'ipaddr': self.IPADDR,
         }
@@ -409,7 +409,7 @@ class TestIntegration(unittest.TestCase):
             'ikey': self.IKEY,
             'skey': self.SKEY,
             'host': self.HOST,
-            'password': self.PASSCODE,
+            'challenge_type': self.CHALLENGE_TYPE,
             'ipaddr': self.IPADDR,
         }
         self.assert_auth(
@@ -417,9 +417,9 @@ class TestIntegration(unittest.TestCase):
             expected_control='',
         )
 
-    def test_missing_password(self):
+    def test_missing_challenge_type(self):
         environ = self.normal_environ()
-        del environ['password']
+        del environ['challenge_type']
         self.expect_preauth('auth', factor=None)
         self.assert_auth(
             environ=environ,
@@ -430,7 +430,7 @@ class TestIntegration(unittest.TestCase):
         environ = {
             'skey': self.SKEY,
             'host': self.HOST,
-            'password': self.PASSCODE,
+            'challenge_type': self.CHALLENGE_TYPE,
             'username': self.USERNAME,
             'ipaddr': self.IPADDR,
         }
@@ -443,7 +443,7 @@ class TestIntegration(unittest.TestCase):
         environ = {
             'ikey': self.IKEY,
             'host': self.HOST,
-            'password': self.PASSCODE,
+            'challenge_type': self.CHALLENGE_TYPE,
             'username': self.USERNAME,
             'ipaddr': self.IPADDR,
         }
@@ -456,7 +456,7 @@ class TestIntegration(unittest.TestCase):
         environ = {
             'ikey': self.IKEY,
             'skey': self.SKEY,
-            'password': self.PASSCODE,
+            'challenge_type': self.CHALLENGE_TYPE,
             'username': self.USERNAME,
             'ipaddr': self.IPADDR,
         }
