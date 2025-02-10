@@ -1,11 +1,10 @@
 import email.utils
 import json
-import os
 import tempfile
 import unittest
 
-from mox3 import mox
-import six
+from unittest.mock import MagicMock
+import io
 
 import duo_openvpn
 
@@ -19,22 +18,22 @@ def mock_client_factory(mock):
     class MockClient(duo_openvpn.Client):
         def __init__(self, *args, **kwargs):
             mock.duo_client_init(*args, **kwargs)
-            super(MockClient, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         def set_proxy(self, *args, **kwargs):
             mock.duo_client_set_proxy(*args, **kwargs)
-            return super(MockClient, self).set_proxy(*args, **kwargs)
+            return super().set_proxy(*args, **kwargs)
 
         def _connect(self):
             return mock
 
     return MockClient
 
-class MockResponse(six.StringIO, object):
+class MockResponse(io.StringIO):
     def __init__(self, status, body, reason='some reason'):
         self.status = status
         self.reason = reason
-        super(MockResponse, self).__init__(body)
+        super().__init__(body)
 
 class TestIntegration(unittest.TestCase):
     IKEY = 'expected ikey'
@@ -60,13 +59,9 @@ class TestIntegration(unittest.TestCase):
     )
 
     def setUp(self):
-        self.mox = mox.Mox()
-        self.expected_calls = self.mox.CreateMockAnything()
+        self.expected_calls = MagicMock()
 
-    def assert_auth(self, environ, expected_control,
-                    send_control=True):
-        self.mox.ReplayAll()
-
+    def assert_auth(self, environ, expected_control, send_control=True):
         with tempfile.NamedTemporaryFile() as control:
             if send_control:
                 environ['control'] = control.name
@@ -76,12 +71,9 @@ class TestIntegration(unittest.TestCase):
                     environ=environ,
                     Client=mock_client_factory(self.expected_calls),
                 )
-            self.mox.VerifyAll()
 
-            control.seek(0, os.SEEK_SET)
-            output = control.read()
-            if not isinstance(output, six.text_type):
-                output = output.decode('utf-8')
+            control.seek(0)
+            output = control.read().decode('utf-8')
             self.assertEqual(expected_control, output)
             if expected_control == '1':
                 self.assertEqual(0, cm.exception.args[0])
@@ -101,7 +93,7 @@ class TestIntegration(unittest.TestCase):
             ikey=self.IKEY,
             skey=self.SKEY,
             host=self.HOST,
-            user_agent=('duo_openvpn/' + duo_openvpn.__version__),
+            user_agent=self.EXPECTED_USER_AGENT,
         )
         self.expected_calls.duo_client_set_proxy(
             host=None,
@@ -114,22 +106,22 @@ class TestIntegration(unittest.TestCase):
         return len(recv_params.split('&')) == len(stanzas) and all([s in recv_params for s in stanzas])
 
     def expect_request(self, method, path, params, params_func=None, response=None, raises=None):
-        if params_func == None:
+        if params_func is None:
             params_func = lambda p: self.compare_params(p, self.EXPECTED_PREAUTH_PARAMS)
-        self.expected_calls.request(method, path, mox.Func(params_func), {
+
+        self.expected_calls.request(
+            method, path, params_func, {
                 'User-Agent': self.EXPECTED_USER_AGENT,
                 'Host': self.HOST,
                 'Content-type': 'application/x-www-form-urlencoded',
-                'Authorization': mox.Func((lambda s: s.startswith('Basic ') and not s.startswith('Basic b\''))),
-                'Date': mox.Func((lambda s: bool(email.utils.parsedate_tz(s))))
-            },
+                'Authorization': MagicMock(side_effect=lambda s: s.startswith('Basic ') and not s.startswith('Basic b\'')),
+                'Date': MagicMock(side_effect=lambda s: bool(email.utils.parsedate_tz(s)))
+            }
         )
-        meth = self.expected_calls.getresponse()
-        if raises is not None:
-            meth.AndRaise(raises)
+        if raises:
+            self.expected_calls.getresponse.side_effect = raises
         else:
-            meth.AndReturn(response)
-            self.expected_calls.close()
+            self.expected_calls.getresponse.return_value = response
 
     def expect_preauth(self, result, path=EXPECTED_PREAUTH_PATH, factor='push1'):
         self.expect_request(
@@ -139,12 +131,12 @@ class TestIntegration(unittest.TestCase):
             response=MockResponse(
                 status=200,
                 body=json.dumps({
-                        'stat': 'OK',
-                        'response': {
-                            'result': result,
-                            'status': 'expected status',
-                            'factors': {'default': factor},
-                        },
+                    'stat': 'OK',
+                    'response': {
+                        'result': result,
+                        'status': 'expected status',
+                        'factors': {'default': factor},
+                    },
                 }),
             ),
         )
@@ -158,11 +150,11 @@ class TestIntegration(unittest.TestCase):
             response=MockResponse(
                 status=200,
                 body=json.dumps({
-                        'stat': 'OK',
-                        'response': {
-                            'result': result,
-                            'status': 'expected status',
-                        },
+                    'stat': 'OK',
+                    'response': {
+                        'result': result,
+                        'status': 'expected status',
+                    },
                 }),
             ),
         )
