@@ -16,9 +16,10 @@ import os
 import socket
 import sys
 import syslog
-import http.client as http_client
-import urllib.parse as urllib_parse
 
+import six
+from six.moves import http_client
+from six.moves.urllib.parse import quote, urlencode
 
 def log(msg):
     msg = 'Duo OpenVPN: %s' % msg
@@ -49,8 +50,8 @@ def canon_params(params):
     # http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
     args = []
     for (key, vals) in sorted(
-        (urllib_parse.quote(key, '~'), vals) for (key, vals) in params.items()):
-        for val in sorted(urllib_parse.quote(val, '~') for val in vals):
+        (quote(key, '~'), vals) for (key, vals) in params.items()):
+        for val in sorted(quote(val, '~') for val in vals):
             args.append('%s=%s' % (key, val))
     return '&'.join(args)
 
@@ -79,19 +80,19 @@ def sign(ikey, skey, method, host, uri, date, sig_version, params):
     """
     canonical = canonicalize(method, host, uri, params, date, sig_version)
 
-    if isinstance(skey, str):
+    if isinstance(skey, six.text_type):
         skey = skey.encode('utf-8')
-    if isinstance(canonical, str):
+    if isinstance(canonical, six.text_type):
         canonical = canonical.encode('utf-8')
 
     sig = hmac.new(skey, canonical, hashlib.sha512)
     auth = '%s:%s' % (ikey, sig.hexdigest())
 
-    if isinstance(auth, str):
+    if isinstance(auth, six.text_type):
         auth = auth.encode('utf-8')
 
     b64 = base64.b64encode(auth)
-    if isinstance(b64, str):
+    if not isinstance(b64, six.text_type):
         b64 = b64.decode('utf-8')
 
     return 'Basic %s' % b64
@@ -105,12 +106,12 @@ def normalize_params(params):
     # urllib cannot handle unicode strings properly. quote() excepts,
     # and urlencode() replaces them with '?'.
     def encode(value):
-        if isinstance(value, str):
+        if isinstance(value, six.text_type):
             return value.encode("utf-8")
         return value
 
     def to_list(value):
-        if value is None or isinstance(value, str):
+        if value is None or isinstance(value, six.string_types):
             return [value]
         return value
 
@@ -184,11 +185,11 @@ class Client(object):
 
         if method in ['POST', 'PUT']:
             headers['Content-type'] = 'application/x-www-form-urlencoded'
-            body = urllib_parse.urlencode(params, doseq=True)
+            body = urlencode(params, doseq=True)
             uri = path
         else:
             body = None
-            uri = path + '?' + urllib_parse.urlencode(params, doseq=True)
+            uri = path + '?' + urlencode(params, doseq=True)
 
         return self._make_request(method, uri, body, headers)
 
@@ -277,7 +278,7 @@ class Client(object):
             error.data = data
             raise error
 
-        if not isinstance(data, str):
+        if not isinstance(data, six.text_type):
             data = data.decode('utf-8')
 
         if response.status != 200:
@@ -292,14 +293,14 @@ class Client(object):
                         ))
                     else:
                         raise_error('Received %s %s' % (
-                            response.status,
+                                response.status,
                             data['message'],
                         ))
             except (ValueError, KeyError, TypeError):
                 pass
             raise_error('Received %s %s' % (
-                response.status,
-                response.reason,
+                    response.status,
+                    response.reason,
             ))
         try:
             data = json.loads(data)
@@ -312,16 +313,18 @@ class Client(object):
 def success(control):
     log('writing success code to %s' % control)
 
-    with open(control, 'w') as f:
-        f.write('1')
+    f = open(control, 'w')
+    f.write('1')
+    f.close()
 
     sys.exit(0)
 
 def failure(control):
     log('writing failure code to %s' % control)
 
-    with open(control, 'w') as f:
-        f.write('0')
+    f = open(control, 'w')
+    f.write('0')
+    f.close()
 
     sys.exit(1)
 
