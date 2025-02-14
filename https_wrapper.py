@@ -22,9 +22,9 @@
 import re
 import socket
 import ssl
-import http.client as http_client
-import urllib.request
-import urllib.error
+
+from six.moves import http_client
+from six.moves import urllib
 
 
 class InvalidCertificateException(http_client.HTTPException):
@@ -37,7 +37,7 @@ class InvalidCertificateException(http_client.HTTPException):
       host: The hostname the connection was made to.
       cert: The SSL certificate (as a dictionary) the host returned.
     """
-    super().__init__()
+    http_client.HTTPException.__init__(self)
     self.host = host
     self.cert = cert
     self.reason = reason
@@ -68,7 +68,7 @@ class CertValidatingHTTPSConnection(http_client.HTTPConnection):
       strict: When true, causes BadStatusLine to be raised if the status line
           can't be parsed as a valid HTTP/1.0 or 1.1 status line.
     """
-    super().__init__(host, port, strict, **kwargs)
+    http_client.HTTPConnection.__init__(self, host, port, strict, **kwargs)
     self.key_file = key_file
     self.cert_file = cert_file
     self.ca_certs = ca_certs
@@ -136,7 +136,7 @@ class CertValidatingHTTPSHandler(urllib.request.HTTPSHandler):
 
   def __init__(self, **kwargs):
     """Constructor. Any keyword args are passed to the http_client handler."""
-    super().__init__()
+    urllib.request.HTTPSHandler.__init__(self)
     self._connection_args = kwargs
 
   def https_open(self, req):
@@ -147,9 +147,9 @@ class CertValidatingHTTPSHandler(urllib.request.HTTPSHandler):
     try:
       return self.do_open(http_class_wrapper, req)
     except urllib.error.URLError as e:
-      if isinstance(e.reason, ssl.SSLError) and e.reason.args[0] == 1:
+      if type(e.reason) == ssl.SSLError and e.reason.args[0] == 1:
         raise InvalidCertificateException(req.host, '',
                                           e.reason.args[1])
       raise
 
-https_request = urllib.request.HTTPSHandler.do_request_
+  https_request = urllib.request.HTTPSHandler.do_request_
