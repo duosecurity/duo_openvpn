@@ -55,6 +55,10 @@ auth_user_pass_verify(struct context *ctx, const char *args[], const char *envp[
 	username = get_env("common_name", envp);
 	password = get_env("password", envp);
 	ipaddr = get_env("untrusted_ip", envp);
+	if (ipaddr == NULL) {
+		/* If untrusted_ip is not set, use untrusted_ip6 because it must be using IPv6 */
+		ipaddr = get_env("untrusted_ip6", envp);
+	}
 
 	if (!control || !username || !password || !ipaddr) {
 		return OPENVPN_PLUGIN_FUNC_ERROR;
