@@ -91,7 +91,7 @@ def sign(ikey, skey, method, host, uri, date, sig_version, params):
         auth = auth.encode('utf-8')
 
     b64 = base64.b64encode(auth)
-    if isinstance(b64, str):
+    if not isinstance(b64, str):
         b64 = b64.decode('utf-8')
 
     return 'Basic %s' % b64
