@@ -6,9 +6,9 @@
 #
 # duo_openvpn.py
 # Duo OpenVPN
-# Copyright 2013 Duo Security, Inc.
+# Copyright 2025 Cisco System, Inc. and its affiliates.
 
-__version__ = '2.7'
+__version__ = '3.0'
 
 import base64
 import email.utils
