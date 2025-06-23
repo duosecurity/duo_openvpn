@@ -18,10 +18,10 @@ The OpenVPN plugin uses Python's ssl module and OpenSSL for TLS operations. Pyth
 
 ## Development:
 
-Download the [Duo OpenVPN v2.4 plugin](https://github.com/duosecurity/duo_openvpn/archive/2.4.tar.gz) by clicking this link or by downloading the ZIP for this repository. Then extract it, build, and install the plugin.
+Download the [Duo OpenVPN v3.0 plugin](https://github.com/duosecurity/duo_openvpn/archive/3.0.tar.gz) by clicking this link or by downloading the ZIP for this repository. Then extract it, build, and install the plugin.
 
 ```
-$ cd duo_openvpn-2.4 OR cd duo_openvpn-master
+$ cd duo_openvpn-3.0 OR cd duo_openvpn-master
 $ make && sudo make install
 ```
 
