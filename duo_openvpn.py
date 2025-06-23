@@ -6,7 +6,7 @@
 #
 # duo_openvpn.py
 # Duo OpenVPN
-# Copyright 2025 Cisco System, Inc. and its affiliates.
+# Copyright 2025 Cisco Systems, Inc. and its affiliates.
 
 __version__ = '3.0'
 
