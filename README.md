@@ -10,13 +10,11 @@
 
 # Installing
 
-Python 3 or 2.7 needs to be installed on your OpenVPN server.
-
-Currently, this plugin is not compatible with Python 3.12.  Note that this is the default Python version for Ubuntu 24.04.
+Python 3 needs to be installed on your OpenVPN server.
 
 ## TLS 1.2 and 1.3 Support
 
-The OpenVPN plugin uses Python's ssl module and OpenSSL for TLS operations. Python versions 2.7 (and higher) and 3.5 (and higher) have both TLS 1.2 and TLS 1.3 support.
+The OpenVPN plugin uses Python's ssl module and OpenSSL for TLS operations. Python 3.5 (and higher) has both TLS 1.2 and TLS 1.3 support.
 
 ## Development:
 
