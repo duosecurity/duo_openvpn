@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 
+import unittest.mock
 from unittest.mock import MagicMock
 import io
 
@@ -496,6 +497,60 @@ class TestIntegration(unittest.TestCase):
             environ=environ,
             expected_control='1',
         )
+
+class TestCertValidatingHTTPSConnection(unittest.TestCase):
+    """Tests for CertValidatingHTTPSConnection.connect() SNI hostname logic."""
+
+    def _make_connection(self, host, ca_certs='/path/to/ca.pem', tunnel_host=None):
+        from https_wrapper import CertValidatingHTTPSConnection
+        conn = CertValidatingHTTPSConnection(host, ca_certs=ca_certs)
+        if tunnel_host:
+            conn.set_tunnel(tunnel_host)
+        return conn
+
+    def test_connect_direct_uses_host_for_sni(self):
+        """Without a proxy, wrap_socket should use self.host as server_hostname."""
+        from https_wrapper import CertValidatingHTTPSConnection
+        conn = self._make_connection('api-host.duosecurity.com')
+
+        mock_sock = MagicMock()
+        mock_context = MagicMock()
+        mock_wrapped = MagicMock()
+        mock_context.wrap_socket.return_value = mock_wrapped
+        mock_wrapped.getpeercert.return_value = {
+            'subjectAltName': [('DNS', '*.duosecurity.com')],
+        }
+
+        with unittest.mock.patch('socket.create_connection', return_value=mock_sock), \
+             unittest.mock.patch('ssl.create_default_context', return_value=mock_context):
+            conn.connect()
+
+        mock_context.wrap_socket.assert_called_once_with(
+            mock_sock, server_hostname='api-host.duosecurity.com',
+        )
+
+    def test_connect_proxy_uses_tunnel_host_for_sni(self):
+        """With a proxy (set_tunnel), wrap_socket should use the tunnel host, not the proxy IP."""
+        conn = self._make_connection('10.0.0.1', tunnel_host='api-host.duosecurity.com')
+
+        mock_sock = MagicMock()
+        mock_context = MagicMock()
+        mock_wrapped = MagicMock()
+        mock_context.wrap_socket.return_value = mock_wrapped
+        mock_wrapped.getpeercert.return_value = {
+            'subjectAltName': [('DNS', '*.duosecurity.com')],
+        }
+
+        with unittest.mock.patch('socket.create_connection', return_value=mock_sock), \
+             unittest.mock.patch('ssl.create_default_context', return_value=mock_context):
+            # Bypass the actual HTTP CONNECT tunnel
+            with unittest.mock.patch.object(conn, '_tunnel'):
+                conn.connect()
+
+        mock_context.wrap_socket.assert_called_once_with(
+            mock_sock, server_hostname='api-host.duosecurity.com',
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

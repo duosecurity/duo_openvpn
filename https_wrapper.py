@@ -121,14 +121,13 @@ class CertValidatingHTTPSConnection(http_client.HTTPConnection):
         context.load_cert_chain(self.cert_file, keyfile=self.key_file)
 
     context.options = self.cert_reqs | ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
-    self.sock = context.wrap_socket(self.sock, server_hostname=self.host)
+    server_hostname = self._tunnel_host or self.host
+    self.sock = context.wrap_socket(self.sock, server_hostname=server_hostname)
 
     if self.cert_reqs & ssl.CERT_REQUIRED:
       cert = self.sock.getpeercert()
-      cert_validation_host = self._tunnel_host or self.host
-      hostname = cert_validation_host.split(':', 0)[0]
-      if not self._ValidateCertificateHostname(cert, hostname):
-        raise InvalidCertificateException(hostname, cert, 'hostname mismatch')
+      if not self._ValidateCertificateHostname(cert, server_hostname):
+        raise InvalidCertificateException(server_hostname, cert, 'hostname mismatch')
 
 
 class CertValidatingHTTPSHandler(urllib.request.HTTPSHandler):
