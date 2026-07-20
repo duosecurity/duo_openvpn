@@ -130,6 +130,33 @@ class CertValidatingHTTPSConnection(http_client.HTTPConnection):
         raise InvalidCertificateException(server_hostname, cert, 'hostname mismatch')
 
 
+class OSTrustStoreHTTPSConnection(http_client.HTTPConnection):
+  """An HTTPConnection that connects over SSL using the OS trust store (no CA pinning)."""
+
+  default_port = http_client.HTTPS_PORT
+
+  def __init__(self, host, port=None, key_file=None, cert_file=None,
+               strict=None, **kwargs):
+    super().__init__(host, port, strict, **kwargs)
+    self.key_file = key_file
+    self.cert_file = cert_file
+
+  def connect(self):
+    "Connect to a host on a given (SSL) port using OS trust store."
+    self.sock = socket.create_connection((self.host, self.port),
+                                         self.timeout)
+    if self._tunnel_host:
+      self._tunnel()
+
+    context = ssl.create_default_context()
+
+    if self.cert_file:
+        context.load_cert_chain(self.cert_file, keyfile=self.key_file)
+
+    server_hostname = self._tunnel_host or self.host
+    self.sock = context.wrap_socket(self.sock, server_hostname=server_hostname)
+
+
 class CertValidatingHTTPSHandler(urllib.request.HTTPSHandler):
   """An HTTPHandler that validates SSL certificates."""
 

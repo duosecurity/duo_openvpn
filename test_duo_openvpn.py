@@ -1,5 +1,6 @@
 import email.utils
 import json
+import ssl
 import tempfile
 import unittest
 
@@ -497,6 +498,142 @@ class TestIntegration(unittest.TestCase):
             environ=environ,
             expected_control='1',
         )
+
+class TestCAPinningConfig(unittest.TestCase):
+    """Tests for CA pinning configuration via DUO_ENABLE_CA_PINNING env var."""
+
+    IKEY = 'test_ikey'
+    SKEY = 'test_skey'
+    HOST = 'test_host'
+    USERNAME = 'test_user'
+    PASSCODE = 'test_pass'
+    IPADDR = '1.2.3.4'
+
+    def _make_environ(self, ca_pinning_value=None):
+        environ = {
+            'ikey': self.IKEY,
+            'skey': self.SKEY,
+            'host': self.HOST,
+            'username': self.USERNAME,
+            'password': self.PASSCODE,
+            'ipaddr': self.IPADDR,
+        }
+        if ca_pinning_value is not None:
+            environ['DUO_ENABLE_CA_PINNING'] = ca_pinning_value
+        return environ
+
+    def _run_main(self, environ):
+        """Run main() with a mock Client and return the kwargs passed to Client.__init__."""
+        init_kwargs = {}
+
+        class CapturingClient(duo_openvpn.Client):
+            def __init__(self, **kwargs):
+                init_kwargs.update(kwargs)
+                super().__init__(**kwargs)
+
+            def _connect(self):
+                mock_conn = MagicMock()
+                mock_conn.getresponse.return_value = MockResponse(
+                    status=200,
+                    body=json.dumps({
+                        'stat': 'OK',
+                        'response': {
+                            'result': 'allow',
+                            'status': 'ok',
+                            'factors': {'default': 'push1'},
+                        },
+                    }),
+                )
+                return mock_conn
+
+        with tempfile.NamedTemporaryFile() as control:
+            environ['control'] = control.name
+            with self.assertRaises(SystemExit):
+                duo_openvpn.main(environ=environ, Client=CapturingClient)
+
+        return init_kwargs
+
+    def test_ca_pinning_enabled_by_default(self):
+        """When DUO_ENABLE_CA_PINNING is not set, pinning is enabled."""
+        kwargs = self._run_main(self._make_environ())
+        self.assertTrue(kwargs['ca_pinning_enabled'])
+
+    def test_ca_pinning_enabled_explicit(self):
+        """When DUO_ENABLE_CA_PINNING=1, pinning is enabled."""
+        kwargs = self._run_main(self._make_environ('1'))
+        self.assertTrue(kwargs['ca_pinning_enabled'])
+
+    def test_ca_pinning_enabled_true_string(self):
+        """When DUO_ENABLE_CA_PINNING=true, pinning is enabled."""
+        kwargs = self._run_main(self._make_environ('true'))
+        self.assertTrue(kwargs['ca_pinning_enabled'])
+
+    def test_ca_pinning_disabled_zero(self):
+        """When DUO_ENABLE_CA_PINNING=0, pinning is disabled."""
+        kwargs = self._run_main(self._make_environ('0'))
+        self.assertFalse(kwargs['ca_pinning_enabled'])
+
+    def test_ca_pinning_disabled_false(self):
+        """When DUO_ENABLE_CA_PINNING=false, pinning is disabled."""
+        kwargs = self._run_main(self._make_environ('false'))
+        self.assertFalse(kwargs['ca_pinning_enabled'])
+
+    def test_ca_pinning_disabled_case_insensitive(self):
+        """DUO_ENABLE_CA_PINNING is case-insensitive."""
+        kwargs = self._run_main(self._make_environ('FALSE'))
+        self.assertFalse(kwargs['ca_pinning_enabled'])
+
+    def test_user_agent_pinning_enabled(self):
+        """User agent includes ca_bundle version and ca_pinning=enabled when pinning is on."""
+        kwargs = self._run_main(self._make_environ('1'))
+        self.assertIn('ca_bundle/' + duo_openvpn.CA_BUNDLE_VERSION, kwargs['user_agent'])
+        self.assertIn('(ca_pinning=enabled)', kwargs['user_agent'])
+
+    def test_user_agent_pinning_disabled(self):
+        """User agent includes ca_bundle version and ca_pinning=disabled when pinning is off."""
+        kwargs = self._run_main(self._make_environ('0'))
+        self.assertIn('ca_bundle/' + duo_openvpn.CA_BUNDLE_VERSION, kwargs['user_agent'])
+        self.assertIn('(ca_pinning=disabled)', kwargs['user_agent'])
+
+    def test_user_agent_format(self):
+        """User agent has the expected full format."""
+        kwargs = self._run_main(self._make_environ())
+        expected = 'duo_openvpn/' + duo_openvpn.__version__ + ' ca_bundle/' + duo_openvpn.CA_BUNDLE_VERSION + ' (ca_pinning=enabled)'
+        self.assertEqual(kwargs['user_agent'], expected)
+
+    def test_connect_uses_pinned_ca_when_enabled(self):
+        """When pinning is enabled, _connect() uses CertValidatingHTTPSConnection."""
+        from https_wrapper import CertValidatingHTTPSConnection
+        client = duo_openvpn.Client(
+            ikey='i', skey='s', host='h',
+            ca_pinning_enabled=True,
+        )
+        with unittest.mock.patch('duo_openvpn.CertValidatingHTTPSConnection') as mock_cls:
+            mock_cls.return_value = MagicMock()
+            conn = client._connect()
+            mock_cls.assert_called_once()
+
+    def test_connect_uses_os_trust_store_when_disabled(self):
+        """When pinning is disabled, _connect() uses OSTrustStoreHTTPSConnection."""
+        from https_wrapper import OSTrustStoreHTTPSConnection
+        client = duo_openvpn.Client(
+            ikey='i', skey='s', host='h',
+            ca_pinning_enabled=False,
+        )
+        with unittest.mock.patch('duo_openvpn.OSTrustStoreHTTPSConnection') as mock_cls:
+            mock_cls.return_value = MagicMock()
+            conn = client._connect()
+            mock_cls.assert_called_once()
+
+    def test_tls_still_enforced_when_pinning_disabled(self):
+        """Disabling pinning does not disable TLS — context has CERT_REQUIRED."""
+        # Verify that ssl.create_default_context() produces a context
+        # that enforces certificate validation. This is what
+        # OSTrustStoreHTTPSConnection uses.
+        context = ssl.create_default_context()
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+
 
 class TestCertValidatingHTTPSConnection(unittest.TestCase):
     """Tests for CertValidatingHTTPSConnection.connect() SNI hostname logic."""

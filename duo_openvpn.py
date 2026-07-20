@@ -28,7 +28,7 @@ try:
     import hashlib
     import hmac
     import json
-    from https_wrapper import CertValidatingHTTPSConnection
+    from https_wrapper import CertValidatingHTTPSConnection, OSTrustStoreHTTPSConnection
 except ImportError as e:
     log('ImportError: %s' % e)
     log('Please make sure you\'re running Python 2.6 or newer')
@@ -39,6 +39,7 @@ API_RESULT_ALLOW  = 'allow'
 API_RESULT_DENY   = 'deny'
 API_RESULT_ENROLL = 'enroll'
 
+CA_BUNDLE_VERSION = '1.0'
 DEFAULT_CA_CERTS = os.path.join(os.path.dirname(__file__), 'ca_certs.pem')
 
 def canon_params(params):
@@ -124,9 +125,11 @@ class Client(object):
 
     def __init__(self, ikey, skey, host,
                  ca_certs=DEFAULT_CA_CERTS,
-                 sig_timezone='UTC', user_agent=None):
+                 sig_timezone='UTC', user_agent=None,
+                 ca_pinning_enabled=True):
         """
         ca_certs - Path to CA pem file.
+        ca_pinning_enabled - When False, use OS trust store instead of pinned CAs.
         """
         self.ikey = ikey
         self.skey = skey
@@ -136,6 +139,7 @@ class Client(object):
         if ca_certs is None:
             ca_certs = DEFAULT_CA_CERTS
         self.ca_certs = ca_certs
+        self.ca_pinning_enabled = ca_pinning_enabled
         self.user_agent = user_agent
         self.set_proxy(host=None, proxy_type=None)
         self.timeout = socket._GLOBAL_DEFAULT_TIMEOUT
@@ -216,6 +220,8 @@ class Client(object):
             conn = http_client.HTTPConnection(host, port)
         elif self.ca_certs == 'DISABLE':
             conn = http_client.HTTPSConnection(host, port)
+        elif not self.ca_pinning_enabled:
+            conn = OSTrustStoreHTTPSConnection(host, port)
         else:
             conn = CertValidatingHTTPSConnection(host,
                                                  port,
@@ -400,11 +406,23 @@ def main(Client=Client, environ=os.environ):
             log('required configuration parameter "{0:s}" not found'.format(k))
             failure(control)
 
+    ca_pinning_setting = environ.get('DUO_ENABLE_CA_PINNING', '1').lower()
+    ca_pinning_enabled = ca_pinning_setting not in ('0', 'false')
+
+    if not ca_pinning_enabled:
+        log('WARNING: CA pinning is disabled. Using OS trust store for TLS validation.')
+
+    ca_pinning_status = 'enabled' if ca_pinning_enabled else 'disabled'
+    user_agent = ('duo_openvpn/' + __version__ +
+                  ' ca_bundle/' + CA_BUNDLE_VERSION +
+                  ' (ca_pinning=' + ca_pinning_status + ')')
+
     client = Client(
         ikey=get_config('ikey'),
         skey=get_config('skey'),
         host=get_config('host'),
-        user_agent='duo_openvpn/' + __version__,
+        user_agent=user_agent,
+        ca_pinning_enabled=ca_pinning_enabled,
     )
     if environ.get('proxy_host'):
         client.set_proxy(
