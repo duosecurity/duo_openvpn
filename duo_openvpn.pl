@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use IO::Socket::SSL;
 use LWP::UserAgent;
 use Sys::Syslog qw(:standard);
 use URI::Escape;
@@ -12,6 +13,9 @@ use Data::Dumper;
 use File::Spec;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Terse  = 1;
+
+my $VERSION = '3.1';
+my $CA_BUNDLE_VERSION = '1.0';
 
 my $API_RESULT_AUTH   = qr/^auth$/;
 my $API_RESULT_ALLOW  = qr/^allow$/;
@@ -40,6 +44,16 @@ if (not $ikey or not $skey or not $host) {
 }
 
 my $ca_certs = get_ca_certs();
+
+my $ca_pinning_setting = lc($ENV{'DUO_ENABLE_CA_PINNING'} // '1');
+my $ca_pinning_enabled = ($ca_pinning_setting ne '0' && $ca_pinning_setting ne 'false');
+my $ca_pinning_status = $ca_pinning_enabled ? 'enabled' : 'disabled';
+
+logger("CA bundle version: $CA_BUNDLE_VERSION, CA pinning: $ca_pinning_status");
+
+if (not $ca_pinning_enabled) {
+    logger('WARNING: CA pinning is disabled. Using OS trust store for TLS validation.');
+}
 
 preauth();
 auth();
@@ -81,13 +95,25 @@ sub sign {
 sub call {
     my ($ikey, $skey, $host, $path, $kwargs) = @_;
 
-    my $ssl_opts = {
-        verify_hostname => 1,
-        SSL_ca_file => $ca_certs,
-        SSL_ca_path => undef
-    };
+    my $ssl_opts;
+    if ($ca_pinning_enabled) {
+        $ssl_opts = {
+            verify_hostname => 1,
+            SSL_ca_file => $ca_certs,
+            SSL_ca_path => '/nonexistent',
+        };
+    }
+    else {
+        # Use IO::Socket::SSL default CA detection (OS trust store)
+        my %default_ca = IO::Socket::SSL::default_ca();
+        $ssl_opts = {
+            verify_hostname => 1,
+            %default_ca,
+        };
+    }
 
-    my $ua = LWP::UserAgent->new(ssl_opts => $ssl_opts);
+    my $user_agent = "duo_openvpn/$VERSION ca_bundle/$CA_BUNDLE_VERSION (ca_pinning=$ca_pinning_status)";
+    my $ua = LWP::UserAgent->new(ssl_opts => $ssl_opts, agent => $user_agent);
 
     $ua->default_header(
         'Authorization' => sign($ikey, $skey, $host, $path, $kwargs),

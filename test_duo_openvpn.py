@@ -634,6 +634,42 @@ class TestCAPinningConfig(unittest.TestCase):
         self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
         self.assertTrue(context.check_hostname)
 
+    @unittest.mock.patch('duo_openvpn.syslog.syslog')
+    def test_startup_logs_ca_bundle_version_when_pinning_enabled(self, mock_syslog):
+        """CA bundle version is logged at startup when pinning is enabled."""
+        self._run_main(self._make_environ('1'))
+        log_messages = [call[0][0] for call in mock_syslog.call_args_list]
+        bundle_log = [m for m in log_messages if 'CA bundle version' in m]
+        self.assertEqual(len(bundle_log), 1)
+        self.assertIn(duo_openvpn.CA_BUNDLE_VERSION, bundle_log[0])
+        self.assertIn('CA pinning: enabled', bundle_log[0])
+
+    @unittest.mock.patch('duo_openvpn.syslog.syslog')
+    def test_startup_logs_ca_bundle_version_when_pinning_disabled(self, mock_syslog):
+        """CA bundle version is logged at startup when pinning is disabled."""
+        self._run_main(self._make_environ('0'))
+        log_messages = [call[0][0] for call in mock_syslog.call_args_list]
+        bundle_log = [m for m in log_messages if 'CA bundle version' in m]
+        self.assertEqual(len(bundle_log), 1)
+        self.assertIn(duo_openvpn.CA_BUNDLE_VERSION, bundle_log[0])
+        self.assertIn('CA pinning: disabled', bundle_log[0])
+
+    @unittest.mock.patch('duo_openvpn.syslog.syslog')
+    def test_startup_logs_warning_when_pinning_disabled(self, mock_syslog):
+        """A warning is logged when CA pinning is disabled."""
+        self._run_main(self._make_environ('0'))
+        log_messages = [call[0][0] for call in mock_syslog.call_args_list]
+        warning_logs = [m for m in log_messages if 'WARNING' in m and 'CA pinning is disabled' in m]
+        self.assertEqual(len(warning_logs), 1)
+
+    @unittest.mock.patch('duo_openvpn.syslog.syslog')
+    def test_startup_no_warning_when_pinning_enabled(self, mock_syslog):
+        """No warning is logged when CA pinning is enabled."""
+        self._run_main(self._make_environ('1'))
+        log_messages = [call[0][0] for call in mock_syslog.call_args_list]
+        warning_logs = [m for m in log_messages if 'WARNING' in m and 'CA pinning is disabled' in m]
+        self.assertEqual(len(warning_logs), 0)
+
 
 class TestCertValidatingHTTPSConnection(unittest.TestCase):
     """Tests for CertValidatingHTTPSConnection.connect() SNI hostname logic."""

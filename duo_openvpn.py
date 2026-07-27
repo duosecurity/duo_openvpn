@@ -409,10 +409,11 @@ def main(Client=Client, environ=os.environ):
     ca_pinning_setting = environ.get('DUO_ENABLE_CA_PINNING', '1').lower()
     ca_pinning_enabled = ca_pinning_setting not in ('0', 'false')
 
+    ca_pinning_status = 'enabled' if ca_pinning_enabled else 'disabled'
+    log('CA bundle version: %s, CA pinning: %s' % (CA_BUNDLE_VERSION, ca_pinning_status))
+
     if not ca_pinning_enabled:
         log('WARNING: CA pinning is disabled. Using OS trust store for TLS validation.')
-
-    ca_pinning_status = 'enabled' if ca_pinning_enabled else 'disabled'
     user_agent = ('duo_openvpn/' + __version__ +
                   ' ca_bundle/' + CA_BUNDLE_VERSION +
                   ' (ca_pinning=' + ca_pinning_status + ')')
