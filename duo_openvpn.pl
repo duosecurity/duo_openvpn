@@ -100,7 +100,7 @@ sub call {
         $ssl_opts = {
             verify_hostname => 1,
             SSL_ca_file => $ca_certs,
-            SSL_ca_path => '/nonexistent',
+            SSL_ca_path => '/dev/null',
         };
     }
     else {
