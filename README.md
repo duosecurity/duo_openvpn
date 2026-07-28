@@ -53,6 +53,30 @@ We recommend setting the reneg-sec option in the server configuration file. This
 reneg-sec 0
 ```
 
+## CA Pinning Configuration
+
+By default, duo_openvpn validates TLS connections to the Duo API against a bundled CA certificate bundle (CA pinning enabled). If you need to disable CA pinning — for example, during a CA certificate transition — you can configure the plugin to validate against the operating system's trust store instead.
+
+**Important:** Disabling CA pinning does **not** disable TLS verification. Connections are still encrypted and validated against the OS trust store.
+
+To disable CA pinning, set the following environment variable on the OpenVPN server before the OpenVPN service starts:
+
+```
+export DUO_ENABLE_CA_PINNING=0
+```
+
+And add:
+```
+Environment="DUO_ENABLE_CA_PINNING=0"
+```
+
+| Value | Behavior |
+|-------|----------|
+| `1` or unset (default) | CA pinning enabled — validates against bundled CA bundle |
+| `0` or `false` | CA pinning disabled — validates against OS trust store |
+
+This setting requires access to the OpenVPN server's service configuration.
+
 ## Configure the Client
 Ensure the following line is present in the OpenVPN client configuration file of all of your users:
 ```
