@@ -118,6 +118,7 @@ class CertValidatingHTTPSConnection(http_client.HTTPConnection):
     context.check_hostname = True
     context.verify_mode = ssl.CERT_REQUIRED
     context.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
+    context.verify_flags |= ssl.VERIFY_X509_STRICT
     context.load_verify_locations(cafile=self.ca_certs)
 
     if self.cert_file:
