@@ -695,7 +695,7 @@ class TestCertValidatingHTTPSConnection(unittest.TestCase):
         }
 
         with unittest.mock.patch('socket.create_connection', return_value=mock_sock), \
-             unittest.mock.patch('ssl.create_default_context', return_value=mock_context):
+             unittest.mock.patch('ssl.SSLContext', return_value=mock_context):
             conn.connect()
 
         mock_context.wrap_socket.assert_called_once_with(
@@ -715,7 +715,7 @@ class TestCertValidatingHTTPSConnection(unittest.TestCase):
         }
 
         with unittest.mock.patch('socket.create_connection', return_value=mock_sock), \
-             unittest.mock.patch('ssl.create_default_context', return_value=mock_context):
+             unittest.mock.patch('ssl.SSLContext', return_value=mock_context):
             # Bypass the actual HTTP CONNECT tunnel
             with unittest.mock.patch.object(conn, '_tunnel'):
                 conn.connect()
@@ -723,6 +723,36 @@ class TestCertValidatingHTTPSConnection(unittest.TestCase):
         mock_context.wrap_socket.assert_called_once_with(
             mock_sock, server_hostname='api-host.duosecurity.com',
         )
+
+    def test_connect_does_not_load_system_cas(self):
+        """New approach: SSLContext(PROTOCOL_TLS_CLIENT) does NOT load OS trust store."""
+        conn = self._make_connection('api-host.duosecurity.com')
+        mock_sock = MagicMock()
+        mock_context = MagicMock()
+        mock_context.wrap_socket.return_value = MagicMock(getpeercert=MagicMock(return_value={
+            'subjectAltName': [('DNS', '*.duosecurity.com')],
+        }))
+
+        with unittest.mock.patch('socket.create_connection', return_value=mock_sock), \
+             unittest.mock.patch('ssl.SSLContext', return_value=mock_context), \
+             unittest.mock.patch('ssl.create_default_context') as mock_default:
+            conn.connect()
+
+        # create_default_context must NOT be called — it loads OS CAs
+        mock_default.assert_not_called()
+        # Only our bundled CA file is loaded
+        mock_context.load_verify_locations.assert_called_once_with(cafile='/path/to/ca.pem')
+
+    def test_ssl_context_enforces_tls_verification(self):
+        """SSLContext(PROTOCOL_TLS_CLIENT) must have check_hostname=True, CERT_REQUIRED, and no SSLv3."""
+        import ssl
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self.assertTrue(ctx.check_hostname,
+            'check_hostname must be True')
+        self.assertEqual(ctx.verify_mode, ssl.CERT_REQUIRED,
+            'verify_mode must be CERT_REQUIRED')
+        self.assertTrue(ctx.options & ssl.OP_NO_SSLv3,
+            'SSLv3 must be disabled')
 
 
 if __name__ == '__main__':
