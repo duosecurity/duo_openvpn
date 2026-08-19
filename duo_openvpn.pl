@@ -14,7 +14,7 @@ use File::Spec;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Terse  = 1;
 
-my $VERSION = '3.1';
+my $VERSION = '3.2';
 my $CA_BUNDLE_VERSION = '1.0';
 
 my $API_RESULT_AUTH   = qr/^auth$/;

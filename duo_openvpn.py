@@ -8,7 +8,7 @@
 # Duo OpenVPN
 # Copyright 2025 Cisco Systems, Inc. and its affiliates.
 
-__version__ = '3.1'
+__version__ = '3.2'
 
 import base64
 import email.utils
