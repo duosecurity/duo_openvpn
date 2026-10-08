@@ -1,5 +1,7 @@
 PREFIX=/opt/duo
 CFLAGS += -DPREFIX='"$(PREFIX)"'
+CFLAGS += -O2 -D_FORTIFY_SOURCE=2 -fstack-protector-strong
+LDFLAGS += -Wl,-z,relro,-z,now
 
 ifdef USE_PERL
 CFLAGS += -DUSE_PERL
@@ -14,7 +16,7 @@ duo_openvpn.o: duo_openvpn.c
 	$(CC) $(CFLAGS) -fPIC -c duo_openvpn.c
 
 duo_openvpn.so: duo_openvpn.o
-	$(CC) -fPIC -shared -Wl,-soname,duo_openvpn.so -o duo_openvpn.so duo_openvpn.o -lc
+	$(CC) -fPIC -shared -Wl,-soname,duo_openvpn.so $(LDFLAGS) -o duo_openvpn.so duo_openvpn.o -lc
 
 install: duo_openvpn.so
 	mkdir -p $(DESTDIR)$(PREFIX)

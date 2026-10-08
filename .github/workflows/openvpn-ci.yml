@@ -1,4 +1,4 @@
-name: OpenVPN Python component CI
+name: OpenVPN CI
 on:
   push:
     branches:
@@ -8,6 +8,21 @@ on:
       - master
 
 jobs:
+  build:
+    name: OpenVPN - C shim build & hardening check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build duo_openvpn.so
+        run: make
+      - name: Verify stack protector
+        run: nm duo_openvpn.so | grep -q __stack_chk_fail
+      - name: Verify RELRO
+        run: readelf -l duo_openvpn.so | grep -q GNU_RELRO
+      - name: Verify BIND_NOW
+        run: readelf -d duo_openvpn.so | grep -q BIND_NOW
+
   test:
     name: OpenVPN - test
     runs-on: ubuntu-latest
